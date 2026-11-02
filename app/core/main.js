@@ -167,6 +167,12 @@ let tk = { conn: null, wanted: false, username: '', status: 'disconnected', room
 function tiktokState() { return { status: tk.status, username: tk.username, roomId: tk.roomId, viewers: tk.viewers, err: tk.err }; }
 function setTkStatus(s, err = '') { tk.status = s; tk.err = err; toPanel('tiktok-state', tiktokState()); toStage('tiktok-state', tiktokState()); }
 function pickImg(img) { if (!img) return ''; const u = img.urlList || img.url_list || img.url || img.urls; return Array.isArray(u) ? (u.find(x => /^https?:/.test(x) && !/\.heic/i.test(x)) || u[0] || '') : (typeof u === 'string' ? u : ''); }
+function imgList(img) { if (!img) return []; const u = img.urlList || img.url_list || img.url || img.urls; return (Array.isArray(u) ? u : (typeof u === 'string' ? [u] : [])).filter(x => /^https?:/.test(x)); }
+function avatarList(u) {
+  const all = [].concat(imgList(u.avatarMedium), imgList(u.avatarThumb), imgList(u.avatarLarge), imgList(u.profilePictureMedium), imgList(u.profilePicture), imgList(u.profilePictureLarge), u.profilePictureUrl ? [u.profilePictureUrl] : []);
+  const uniq = [...new Set(all)];
+  return uniq.filter(x => !/\.heic/i.test(x)).concat(uniq.filter(x => /\.heic/i.test(x))).slice(0, 6);
+}
 function normUser(u) {
   u = u || {};
   const uid = u.uniqueId || u.displayId || u.display_id || '';
@@ -174,7 +180,8 @@ function normUser(u) {
     id: String(u.userId || u.id || uid || u.nickname || ''),
     uniqueId: uid,
     nickname: (u.nickname || uid || 'Phật tử').trim(),
-    avatar: pickImg(u.avatarMedium) || pickImg(u.avatarThumb) || pickImg(u.avatarLarge) || pickImg(u.profilePictureMedium) || pickImg(u.profilePicture) || pickImg(u.profilePictureLarge) || u.profilePictureUrl || '',
+    avatar: avatarList(u)[0] || '',
+    avatars: avatarList(u),
   };
 }
 function emitLive(ev) { toStage('live-event', ev); toPanel('live-event', ev); }
@@ -325,18 +332,32 @@ function ttsCacheSize() { try { return fs.readdirSync(DIRS.ttsCache).length; } c
 
 // ---------------- Avatar ----------------
 const avatarCache = new Map();
-async function fetchAvatar(url) {
-  if (!url) return null;
-  if (avatarCache.has(url)) return avatarCache.get(url);
-  try {
-    const r = await net.fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', Referer: 'https://www.tiktok.com/' } });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const ct = r.headers.get('content-type') || 'image/jpeg';
-    const b = Buffer.from(await r.arrayBuffer());
-    const d = 'data:' + ct + ';base64,' + b.toString('base64');
-    avatarCache.set(url, d); if (avatarCache.size > 300) avatarCache.delete(avatarCache.keys().next().value);
-    return d;
-  } catch (e) { log('Không tải được avatar: ' + e.message, 'warn'); return null; }
+let avatarWarned = 0;
+async function fetchAvatar(input) {
+  const list = (Array.isArray(input) ? input : [input]).filter(Boolean);
+  if (!list.length) return null;
+  const key = list[0];
+  if (avatarCache.has(key)) return avatarCache.get(key);
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0 Safari/537.36';
+  const errs = [];
+  for (const url of list) {
+    for (const headers of [{ 'User-Agent': UA, Referer: 'https://www.tiktok.com/' }, { 'User-Agent': UA }]) {
+      try {
+        const r = await net.fetch(url, { headers });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        let ct = (r.headers.get('content-type') || '').split(';')[0].trim();
+        const b = Buffer.from(await r.arrayBuffer());
+        if (b.length < 100) throw new Error('ảnh rỗng');
+        if (/heic|heif/i.test(ct) || /\.heic/i.test(url)) throw new Error('định dạng HEIC không hiển thị được');
+        if (!/^image\//.test(ct)) ct = b[0] === 0x89 ? 'image/png' : (b.slice(8, 12).toString() === 'WEBP' ? 'image/webp' : 'image/jpeg');
+        const d = 'data:' + ct + ';base64,' + b.toString('base64');
+        avatarCache.set(key, d); if (avatarCache.size > 300) avatarCache.delete(avatarCache.keys().next().value);
+        return d;
+      } catch (e) { errs.push(e.message); }
+    }
+  }
+  if (Date.now() - avatarWarned > 60000) { avatarWarned = Date.now(); log('Không tải được avatar (' + list.length + ' link): ' + [...new Set(errs)].join('; ') + ' — ' + String(list[0]).slice(0, 90), 'warn'); }
+  return list.find(x => !/\.heic/i.test(x)) || null; // để màn hình tự thử tải trực tiếp
 }
 
 // ---------------- Hot update qua GitHub ----------------

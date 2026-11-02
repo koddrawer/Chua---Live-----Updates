@@ -1,4 +1,4 @@
 {
   "version": "1.0.10",
-  "notes": "Hiện avatar ở bảng chào mừng (sửa đọc avatar theo định dạng TikTok mới); sửa đọc quà: đúng số xu, không tính trùng khi tặng combo"
+  "notes": "Sửa avatar không hiện ở bảng chào mừng & thẻ donate (thử nhiều link ảnh, bỏ ảnh HEIC, tải trực tiếp khi cần)"
 }

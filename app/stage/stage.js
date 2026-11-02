@@ -458,7 +458,7 @@ function welcome(u) {
   const n = document.createElement('div'); n.className = 'wn'; n.innerHTML = '<b></b> vừa vào chùa'; n.querySelector('b').textContent = u.nickname; row.appendChild(n);
   list.prepend(row);
   while (list.children.length > (cfg.layout.welcome.max || 6)) list.lastElementChild.remove();
-  if (u.avatar) window.api.avatar(u.avatar).then(d => { if (d) { const im = document.createElement('img'); im.src = d; ph.replaceWith(im); } });
+  if (u.avatar) window.api.avatar(u.avatars && u.avatars.length ? u.avatars : u.avatar).then(d => { if (!d) return; const im = document.createElement('img'); im.referrerPolicy = 'no-referrer'; im.onload = () => { if (ph.isConnected) ph.replaceWith(im); }; im.src = d; });
 }
 const stats = { joins: 0, chats: 0, likes: 0, gifts: 0, spawned: 0, dropped: 0, noId: 0 };
 function onJoin(u, src) {
@@ -513,7 +513,7 @@ async function pumpDonors() {
     vars.name = voiceName(d.user.nickname); vars.verse = (fortune.verse || []).join('. ');
     const voiceText = fill(cfg.voice.thanksTemplate, vars).replace(/\s+([.,])/g, '$1').replace(/\.{2,}/g, '.');
     AudioMgr.prefetchThanks(voiceText);
-    const avP = d.user.avatar ? window.api.avatar(d.user.avatar) : Promise.resolve(null);
+    const avP = d.user.avatar ? window.api.avatar(d.user.avatars && d.user.avatars.length ? d.user.avatars : d.user.avatar) : Promise.resolve(null);
     // chờ nhân vật quỳ xuống
     const t0 = now; await waitUntil(() => (c.mode === 'action' && c.auraOn) || c.dead || now - t0 > 6);
     if (!c.dead) await camFocus(c);
@@ -565,6 +565,7 @@ function showCard(o, instant) {
     const fh = fw * fr.h / fr.w, dd = fr.r * fw * 2 * 1.06;
     Object.assign(av.style, { width: dd + 'px', height: dd + 'px', left: (fr.cx * fw - dd / 2) + 'px', top: (fr.cy * fh - dd / 2) + 'px' });
   }
+  av.referrerPolicy = 'no-referrer'; av.onerror = () => { av.onerror = null; av.src = defaultAvatar(o.user.nickname); };
   av.src = o.avatar || defaultAvatar(o.user.nickname);
   if (L.headText) el.querySelector('.dc-head').textContent = fill(L.headText, V);
   const nm = el.querySelector('.dc-name'); nm.textContent = o.user.nickname; nm.style.fontSize = (L.nameSize || 40) + 'px'; nm.style.display = L.showName === false ? 'none' : '';
