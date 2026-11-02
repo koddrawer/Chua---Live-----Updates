@@ -30,12 +30,13 @@
   <div class="grid2">
     <div class="card">
       <h3>Tài khoản TikTok</h3>
-      <label>Tên tài khoản (@username)<input id="tkUser" placeholder="vd: chuabinhan"></label>
+      <label>ID TikTok (phần sau dấu @, không có dấu cách) hoặc link trang LIVE<input id="tkUser" placeholder="vd: vasuny88 hoặc https://www.tiktok.com/@vasuny88/live"></label>
       <div class="row"><button id="btnConnect" class="primary">Kết nối</button><button id="btnDisconnect">Ngắt</button></div>
       <label class="chk"><input type="checkbox" data-k="tiktok.autoConnect"> Tự kết nối khi mở app</label>
       <details><summary>Nâng cao</summary>
         <label>Euler Stream API key (không bắt buộc, giúp kết nối ổn định hơn)<input data-k="tiktok.signApiKey" type="password" placeholder="để trống nếu không có"></label>
         <label>Thử kết nối lại sau (giây)<input type="number" data-k="tiktok.retrySeconds" min="5"></label>
+        <label>Room ID (không bắt buộc — dùng khi app không tự tìm được phòng LIVE)<input data-k="tiktok.roomId" placeholder="để trống = tự tìm"></label>
       </details>
       <p class="muted small" id="tkErr"></p>
     </div>

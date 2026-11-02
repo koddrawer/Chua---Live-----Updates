@@ -1,4 +1,4 @@
 {
-  "version": "1.0.6",
-  "notes": "Thêm cửa sổ ngang 1920×1080/1280×720; ghi chú giọng nam; sửa lỗi thư viện ở bản cập nhật nóng"
+  "version": "1.0.7",
+  "notes": "Sửa kết nối TikTok: bỏ khoảng trắng trong ID, tự tìm Room ID, ô nhập Room ID, ghi lỗi chi tiết"
 }

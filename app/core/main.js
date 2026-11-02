@@ -179,14 +179,16 @@ function normUser(u) {
 function emitLive(ev) { toStage('live-event', ev); toPanel('live-event', ev); }
 
 async function tiktokConnect(username, opts = {}) {
-  username = String(username || '').trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?tiktok\.com\/@/, '').replace(/\/.*$/, '');
+  const raw = String(username || '').trim();
+  username = raw.replace(/^https?:\/\/(www\.|m\.)?tiktok\.com\//, '').replace(/^@/, '').replace(/[/?#].*$/, '').replace(/\s+/g, '');
   if (!username) throw new Error('Chưa nhập tên tài khoản TikTok');
+  if (/\s/.test(raw.replace(/^https?:\S+/, ''))) log('Tên TikTok không có khoảng trắng — đã dùng "@' + username + '". Hãy nhập đúng ID (tên sau dấu @ trên trang cá nhân), không phải tên hiển thị.', 'warn');
   await tiktokDisconnect(false);
   tk.wanted = true; tk.username = username;
   patchConfig({ tiktok: { username } });
   if (!tk.lib) tk.lib = await importLib('tiktok-live-connector');
   const { TikTokLiveConnection, WebcastEvent, ControlEvent } = tk.lib;
-  const options = { processInitialData: false, enableExtendedGiftInfo: true, fetchRoomInfoOnConnect: true };
+  const options = { processInitialData: false, enableExtendedGiftInfo: true, fetchRoomInfoOnConnect: false };
   if (config.tiktok.signApiKey) options.signApiKey = config.tiktok.signApiKey;
   const conn = new TikTokLiveConnection(username, options);
   tk.conn = conn;
@@ -217,16 +219,31 @@ async function tiktokConnect(username, opts = {}) {
   });
   on((ControlEvent && ControlEvent.ERROR) || 'error', e => log('TikTok lỗi: ' + (e?.info || e?.message || JSON.stringify(e)).slice(0, 300), 'error'));
   try {
-    const state = await conn.connect();
+    let rid = String(config.tiktok.roomId || '').trim();
+    if (!rid) rid = await findRoomId(username);
+    if (rid) log('Room ID: ' + rid);
+    const state = await conn.connect(rid || undefined);
     if (tk.conn !== conn) return;
     tk.roomId = state?.roomId || conn.roomId || null;
     setTkStatus('connected'); log('Đã kết nối LIVE @' + username + (tk.roomId ? ' (room ' + tk.roomId + ')' : ''), 'ok');
   } catch (e) {
     if (tk.conn !== conn) return;
     const msg = e?.message || String(e);
-    setTkStatus('error', msg); log('Không kết nối được: ' + msg, 'error');
+    const detail = [].concat(e?.errors || [], e?.cause || []).map(x => x?.message || String(x)).filter(Boolean).slice(0, 4);
+    setTkStatus('error', msg); log('Không kết nối được: ' + msg + (detail.length ? '\n  • ' + detail.join('\n  • ') : ''), 'error');
+    if (/Room ID/i.test(msg)) log('Gợi ý: (1) kiểm tra đúng ID TikTok (sau dấu @, không dấu cách) và tài khoản ĐANG LIVE; (2) nhập Room ID ở mục Nâng cao; (3) nhập Euler Stream API key (miễn phí tại eulerstream.com) ở mục Nâng cao.', 'warn');
     if (tk.wanted) scheduleRetry();
   }
+}
+// Tự tìm Room ID bằng trình duyệt nội bộ của Electron (dùng proxy/cookie hệ thống) — ổn định hơn cách của thư viện
+async function findRoomId(user) {
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0 Safari/537.36';
+  const tries = [
+    async () => { const r = await net.fetch(`https://www.tiktok.com/api-live/user/room/?aid=1988&app_name=tiktok_web&device_platform=web_pc&uniqueId=${encodeURIComponent(user)}&sourceType=54`, { headers: { 'User-Agent': UA, Referer: 'https://www.tiktok.com/' } }); const j = await r.json(); return j?.data?.user?.roomId || j?.data?.liveRoom?.roomId; },
+    async () => { const r = await net.fetch(`https://www.tiktok.com/@${encodeURIComponent(user)}/live`, { headers: { 'User-Agent': UA, 'Accept-Language': 'vi-VN,vi;q=0.9,en;q=0.8' } }); const h = await r.text(); const mm = h.match(/"roomId":"(\d{6,})"/) || h.match(/room_id=(\d{6,})/) || h.match(/"room_id":"?(\d{6,})/); return mm && mm[1]; },
+  ];
+  for (const t of tries) { try { const id = await Promise.race([t(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))]); if (id && String(id) !== '0') return String(id); } catch (e) { console.log('findRoomId', e.message); } }
+  return '';
 }
 function scheduleRetry() {
   clearTimeout(tk.retryTimer);

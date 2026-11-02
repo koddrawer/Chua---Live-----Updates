@@ -3,7 +3,8 @@
     "username": "",
     "signApiKey": "",
     "autoConnect": false,
-    "retrySeconds": 15
+    "retrySeconds": 15,
+    "roomId": ""
   },
   "window": {
     "openStageOnStart": true,
