@@ -2,7 +2,9 @@
 'use strict';
 const W = 720, H = 1280;
 const canvas = document.getElementById('scene');
-const ctx = canvas.getContext('2d');
+let ctx = canvas.getContext('2d');
+const mainCtx = ctx;
+const isPixel = () => !cfg || !cfg.style || cfg.style.pixel !== false;
 const video = document.getElementById('bg');
 const ui = document.getElementById('ui');
 
@@ -52,6 +54,48 @@ function computeStepK() {
 
 // ---------------- Tải nhân vật ----------------
 function loadImg(src) { return new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }); }
+// ---------- 8-bit: thu nhỏ, giảm màu, viền đen 1 pixel ----------
+function pixelateCanvas(img, tw, th, opts = {}) {
+  const pad = opts.outline === false ? 0 : 1;
+  tw = Math.max(1, Math.round(tw)); th = Math.max(1, Math.round(th));
+  const c = document.createElement('canvas'); c.width = tw + pad * 2; c.height = th + pad * 2;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.drawImage(img, pad, pad, tw, th);
+  const id = x.getImageData(0, 0, c.width, c.height), d = id.data, W2 = c.width, H2 = c.height;
+  const lv = opts.levels || 6, st = 255 / (lv - 1);
+  const sat = opts.saturate ?? 1.25;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] < (opts.alphaCut ?? 110)) { d[i + 3] = 0; continue; }
+    d[i + 3] = 255;
+    let r = d[i], g = d[i + 1], b = d[i + 2]; const m = (r + g + b) / 3;
+    r = m + (r - m) * sat; g = m + (g - m) * sat; b = m + (b - m) * sat; // tăng độ rực kiểu 8-bit
+    d[i] = Math.round(Math.max(0, Math.min(255, r)) / st) * st; d[i + 1] = Math.round(Math.max(0, Math.min(255, g)) / st) * st; d[i + 2] = Math.round(Math.max(0, Math.min(255, b)) / st) * st;
+  }
+  if (pad) { // viền tối bên ngoài
+    const op = new Uint8Array(W2 * H2); for (let i = 0; i < W2 * H2; i++) op[i] = d[i * 4 + 3] ? 1 : 0;
+    const oc = opts.outlineColor || [36, 20, 44];
+    for (let yy = 0; yy < H2; yy++) for (let xx = 0; xx < W2; xx++) {
+      const i = yy * W2 + xx; if (op[i]) continue;
+      if ((xx > 0 && op[i - 1]) || (xx < W2 - 1 && op[i + 1]) || (yy > 0 && op[i - W2]) || (yy < H2 - 1 && op[i + W2])) { d[i * 4] = oc[0]; d[i * 4 + 1] = oc[1]; d[i * 4 + 2] = oc[2]; d[i * 4 + 3] = 255; }
+    }
+  }
+  x.putImageData(id, 0, 0);
+  c.pad = pad; return c;
+}
+const pixUrlCache = new Map();
+function pixelateURL(url, tw, opts = {}) { // trả về dataURL ảnh đã 8-bit (khung, avatar)
+  const key = url + '|' + tw + '|' + JSON.stringify(opts);
+  if (pixUrlCache.has(key)) return pixUrlCache.get(key);
+  const p = new Promise(res => { const im = new Image(); im.onload = () => { try { const th = tw * im.height / im.width; res(pixelateCanvas(im, tw, th, opts).toDataURL()); } catch (e) { res(url); } }; im.onerror = () => res(url); im.src = url; });
+  pixUrlCache.set(key, p); if (pixUrlCache.size > 200) pixUrlCache.delete(pixUrlCache.keys().next().value);
+  return p;
+}
+function mipOrPix(img, json) {
+  if (!isPixel()) return mip(img);
+  const ref = json.refHeight || img.height; const sc = ((cfg.style && cfg.style.charPixels) || 64) / ref;
+  const pc = pixelateCanvas(img, img.width * sc, img.height * sc, { levels: 7, saturate: 1.15 });
+  return { full: pc, half: pc, quarter: pc, pix: true, padU: pc.pad / sc };
+}
 function mip(img) {
   const mk = f => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * f)); c.height = Math.max(1, Math.round(img.height * f)); const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(img, 0, 0, c.width, c.height); return c; };
   const half = mk(0.5); const q = document.createElement('canvas'); q.width = Math.max(1, half.width >> 1); q.height = Math.max(1, half.height >> 1);
@@ -62,11 +106,11 @@ async function loadPacks() {
   const want = charList.filter(c => !(cfg.characters.disabled || []).includes(c.id));
   const next = {};
   for (const c of want) {
-    const key = c.id + '|' + JSON.stringify(c.json.animations).length + '|' + Object.keys(c.json.frames || {}).length;
+    const key = c.id + '|' + (isPixel() ? 'px' + ((cfg.style && cfg.style.charPixels) || 64) : 'hd') + '|' + JSON.stringify(c.json.animations).length + '|' + Object.keys(c.json.frames || {}).length;
     if (packs[c.id] && packs[c.id].key === key) { next[c.id] = packs[c.id]; continue; }
     const p = { id: c.id, key, json: c.json, img: {}, ready: false };
     const files = new Set(); Object.values(c.json.animations).forEach(a => (a.frames || []).forEach(f => files.add(f)));
-    await Promise.all([...files].map(async f => { const i = await loadImg(c.base + encodeURIComponent(f) + '?v=' + (c.json.rev || 0)); if (i) p.img[f] = mip(i); }));
+    await Promise.all([...files].map(async f => { const i = await loadImg(c.base + encodeURIComponent(f) + '?v=' + (c.json.rev || 0)); if (i) p.img[f] = mipOrPix(i, c.json); }));
     p.ready = Object.keys(p.img).length > 0;
     if (p.ready) next[c.id] = p;
   }
@@ -253,8 +297,12 @@ function drawSprite(c, file, flip, alpha, h) {
   const x = charX(c), y = c.y + (c.bob || 0);
   const img = pickLevel(fr, dh);
   ctx.globalAlpha = alpha;
-  if (flip) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); ctx.drawImage(img, -(meta.ax * k), y - meta.ay * k, dw, dh); ctx.restore(); }
-  else ctx.drawImage(img, x - meta.ax * k, y - meta.ay * k, dw, dh);
+  const pu = fr.padU || 0; // viền pixel bên ngoài khung
+  const ox = (meta.ax + pu) * k, oy = (meta.ay + pu) * k, ww = (meta.w + pu * 2) * k, hh = (meta.h + pu * 2) * k;
+  if (fr.pix) ctx.imageSmoothingEnabled = false;
+  if (flip) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); ctx.drawImage(img, -ox, y - oy, ww, hh); ctx.restore(); }
+  else ctx.drawImage(img, x - ox, y - oy, ww, hh);
+  if (fr.pix) ctx.imageSmoothingEnabled = true;
 }
 function drawAura(c, h) {
   if (c.aura <= 0.01) return;
@@ -294,12 +342,12 @@ function drawAuraFront(c, h) {
 function drawChar(c) {
   const h = charHeightAt(c.y);
   c.bob = (c.mode === 'walk' || c.mode === 'emerge') ? -Math.sin(Math.min(1, c.stepT / cfg.scene.stepSeconds) * Math.PI) * h * 0.012 : 0;
-  drawAura(c, h);
+  if (!isPixel()) drawAura(c, h);
   if ((c.mode === 'walk' || c.mode === 'action') && !c.auraOn && c.y < DOOR_Y + 45) c.alpha = Math.min(c.alpha, 0.3 + 0.7 * Math.max(0, (c.y - DOOR_Y) / 45));
   if (c.prev && c.xf < 1) { drawSprite(c, c.prev, c.prevFlip, c.alpha * (1 - c.xf), h); drawSprite(c, c.frame, c.flip, c.alpha * c.xf, h); }
   else drawSprite(c, c.frame, c.flip, c.alpha, h);
   ctx.globalAlpha = 1;
-  drawAuraFront(c, h);
+  if (!isPixel()) drawAuraFront(c, h);
 }
 function drawName(c) {
   if (!c.user || !cfg.scene.showNames) return;
@@ -310,19 +358,32 @@ function drawName(c) {
   const x = charX(c), y = c.y - h * (c.frame && /kneel|prostrate/.test(c.frame) ? 0.62 : 1.04) - 6;
   const fadeIn = Math.min(1, (now - c.born) / 0.8), fadeOut = c.auraOn ? 1 : Math.min(1, (c.nameUntil - now) / 0.6);
   ctx.globalAlpha = Math.max(0, Math.min(fadeIn, fadeOut, c.alpha));
-  ctx.font = `700 ${fs}px 'Noto Serif', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
   const txt = c.name.length > 18 ? c.name.slice(0, 17) + '…' : c.name;
-  ctx.lineJoin = 'round'; ctx.lineWidth = fs * 0.28; ctx.strokeStyle = 'rgba(40,18,0,.9)'; ctx.strokeText(txt, x, y);
-  ctx.fillStyle = c.kind === 'donor' || c.auraOn ? '#ffe28a' : '#fff6e0'; ctx.fillText(txt, x, y);
+  const col = c.kind === 'donor' || c.auraOn ? '#ffe28a' : '#fff6e0';
+  if (isPixel()) pixelText(txt, x, y, 16, col, '#2a1030');
+  else {
+    ctx.font = `700 ${fs}px 'Noto Serif', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.lineJoin = 'round'; ctx.lineWidth = fs * 0.28; ctx.strokeStyle = 'rgba(40,18,0,.9)'; ctx.strokeText(txt, x, y);
+    ctx.fillStyle = col; ctx.fillText(txt, x, y);
+  }
   ctx.globalAlpha = 1;
+}
+// chữ kiểu 8-bit: font pixel + viền vuông 4 hướng
+function pixelText(txt, x, y, size, fill, outline) {
+  ctx.font = `${Math.round(size)}px 'PixelVN', monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  const o = Math.max(1.5, size / 9);
+  ctx.fillStyle = outline;
+  for (const [dx, dy] of [[-o, 0], [o, 0], [0, -o], [0, o], [-o, -o], [o, -o], [-o, o], [o, o]]) ctx.fillText(txt, x + dx, y + dy);
+  ctx.fillStyle = fill; ctx.fillText(txt, x, y);
 }
 function drawFloats(dt) {
   for (const f of floats) {
     f.t += dt; const k = f.t / f.dur;
     const a = k < 0.15 ? k / 0.15 : k > 0.75 ? Math.max(0, (1 - k) / 0.25) : 1;
     const y = f.y - k * 70;
-    ctx.globalAlpha = a; ctx.font = `700 25px 'Dancing Script', 'Noto Serif', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.globalAlpha = a; ctx.font = isPixel() ? `16px 'PixelVN'` : `700 25px 'Dancing Script', 'Noto Serif', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     const tw = ctx.measureText(f.text).width / 2 + 10;
+    if (isPixel()) { const xx = Math.max(tw, Math.min(W - tw, f.x)); pixelText(f.text, xx, y, 16, '#ffe48a', '#3a1400'); continue; }
     const x = Math.max(tw, Math.min(W - tw, f.x));
     ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(70,30,0,.85)'; ctx.strokeText(f.text, x, y);
     const g = ctx.createLinearGradient(0, y - 26, 0, y); g.addColorStop(0, '#fff6cf'); g.addColorStop(1, '#ffc65a');
@@ -347,17 +408,18 @@ const video2 = document.createElement('video');
 video2.muted = true; video2.loop = true; video2.playsInline = true; video2.preload = 'auto'; video2.id = 'bg2';
 video2.style.cssText = getComputedStyle(video).cssText; video2.className = video.className;
 video.insertAdjacentElement('afterend', video2);
-function mkBuf() { const c = document.createElement('canvas'); c.width = W; c.height = H; return { c, x: c.getContext('2d'), ready: false, t: -1 }; }
+const BS = 1.2, BW = Math.round(W * BS), BH = Math.round(H * BS); // bộ đệm nền 864x1536 (đúng độ phân giải ảnh gốc)
+function mkBuf() { const c = document.createElement('canvas'); c.width = BW; c.height = BH; return { c, x: c.getContext('2d'), ready: false, t: -1 }; }
 const slots = [{ el: video, buf: mkBuf(), id: null }, { el: video2, buf: mkBuf(), id: null }];
 let curSlot = 0, bgTrans = null, nextSwitchAt = 0, videoList = [];
-const vbuf = document.createElement('canvas'); vbuf.width = W; vbuf.height = H; const vbx = vbuf.getContext('2d');
+const vbuf = document.createElement('canvas'); vbuf.width = BW; vbuf.height = BH; const vbx = vbuf.getContext('2d');
 let vbufReady = false;
 function grab(slot) {
   const v = slot.el, b = slot.buf;
-  if (slot.img) { if (!b.ready && slot.img.complete && slot.img.naturalWidth) { b.x.clearRect(0, 0, W, H); b.x.drawImage(slot.img, 0, 0, W, H); b.ready = true; } return b.ready; }
+  if (slot.img) { if (!b.ready && slot.img.complete && slot.img.naturalWidth) { b.x.clearRect(0, 0, BW, BH); b.x.imageSmoothingEnabled = !isPixel(); b.x.drawImage(slot.img, 0, 0, BW, BH); b.ready = true; } return b.ready; }
   if (v.readyState >= 2 && !v.seeking && v.videoWidth) {
     const t = v.currentTime;
-    if (t !== b.t || !b.ready) { b.x.drawImage(v, 0, 0, W, H); b.t = t; b.ready = true; }
+    if (t !== b.t || !b.ready) { b.x.drawImage(v, 0, 0, BW, BH); b.t = t; b.ready = true; }
   }
   return b.ready;
 }
@@ -490,12 +552,14 @@ const cloud = document.createElement('canvas'); cloud.width = W; cloud.height = 
 function drawCloudCover() {
   if (!vbufReady) return;
   cx2.globalCompositeOperation = 'source-over'; cx2.clearRect(0, 0, W, 240);
-  cx2.drawImage(vbuf, 0, CLOUD_TOP, W, 220, 0, 0, W, 220);
+  cx2.imageSmoothingEnabled = !isPixel(); cx2.drawImage(vbuf, 0, CLOUD_TOP * BS, BW, 220 * BS, 0, 0, W, 220);
   cx2.globalCompositeOperation = 'destination-in';
   const g = cx2.createLinearGradient(0, 0, 0, 220);
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.45, 'rgba(0,0,0,0)'); g.addColorStop(0.75, 'rgba(0,0,0,.75)'); g.addColorStop(1, 'rgba(0,0,0,1)');
   cx2.fillStyle = g; cx2.fillRect(0, 0, W, 220);
+  if (isPixel()) ctx.imageSmoothingEnabled = false;
   ctx.drawImage(cloud, 0, 0, W, 220, 0, CLOUD_TOP, W, 220);
+  ctx.imageSmoothingEnabled = true;
 }
 
 // ---------------- Camera ----------------
@@ -602,18 +666,38 @@ function render(dt) {
   ctx.setTransform(k * cam.z, 0, 0, k * cam.z, offX * dpr + k * (W / 2 - cam.x * cam.z), offY * dpr + k * (H / 2 - cam.y * cam.z));
   ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  const px = isPixel();
+  if (px) ctx.imageSmoothingEnabled = false;
   if (haveVideo) ctx.drawImage(vbuf, 0, 0, W, H);
+  ctx.imageSmoothingEnabled = true;
   updateMotes(dt);
-  drawBgEffects();
-  drawMotes(false);
   const sorted = chars.slice().sort((a, b) => a.y - b.y);
+  if (px) {
+    // 8-bit: hiệu ứng ánh sáng vẽ ở độ phân giải thấp rồi phóng to không làm mịn -> hạt vuông kiểu game cổ
+    fxLayer(fxB, () => { drawBgEffects(); drawMotes(false); for (const c of sorted) drawAura(c, charHeightAt(c.y)); });
+  } else { drawBgEffects(); drawMotes(false); }
   for (const c of sorted) drawChar(c);
   drawCloudCover();
-  drawParticles();
-  drawMotes(true);
+  if (px) fxLayer(fxF, () => { for (const c of sorted) drawAuraFront(c, charHeightAt(c.y)); drawParticles(); drawMotes(true); });
+  else { drawParticles(); drawMotes(true); }
   for (const c of sorted) drawName(c);
   drawFloats(dt);
   ctx.restore();
+}
+// lớp hiệu ứng độ phân giải thấp
+function mkFx() { const c = document.createElement('canvas'); return { c, x: c.getContext('2d') }; }
+const fxB = mkFx(), fxF = mkFx();
+function fxLayer(L, draw) {
+  const res = Math.max(120, (cfg.style && cfg.style.fxRes) || 240);
+  const f = canvas.width / res; // mỗi "pixel" hiệu ứng = f pixel màn hình
+  const w = Math.ceil(canvas.width / f), h = Math.ceil(canvas.height / f);
+  if (L.c.width !== w || L.c.height !== h) { L.c.width = w; L.c.height = h; }
+  const T = mainCtx.getTransform();
+  L.x.setTransform(1, 0, 0, 1, 0, 0); L.x.globalCompositeOperation = 'source-over'; L.x.globalAlpha = 1; L.x.clearRect(0, 0, w, h);
+  L.x.setTransform(T.a / f, T.b / f, T.c / f, T.d / f, T.e / f, T.f / f);
+  ctx = L.x; try { draw(); } finally { ctx = mainCtx; }
+  mainCtx.save(); mainCtx.setTransform(1, 0, 0, 1, 0, 0); mainCtx.imageSmoothingEnabled = false; mainCtx.globalCompositeOperation = 'lighter';
+  mainCtx.drawImage(L.c, 0, 0, w * f, h * f); mainCtx.restore();
 }
 function resize() {
   dpr = window.devicePixelRatio || 1;
@@ -638,7 +722,7 @@ function welcome(u) {
   const n = document.createElement('div'); n.className = 'wn'; n.innerHTML = '<b></b> vừa vào chùa'; n.querySelector('b').textContent = u.nickname; row.appendChild(n);
   list.prepend(row);
   while (list.children.length > (cfg.layout.welcome.max || 6)) list.lastElementChild.remove();
-  if (u.avatar) window.api.avatar(u.avatars && u.avatars.length ? u.avatars : u.avatar).then(d => { if (!d) return; const im = document.createElement('img'); im.referrerPolicy = 'no-referrer'; im.onload = () => { if (ph.isConnected) ph.replaceWith(im); }; im.src = d; });
+  if (u.avatar) window.api.avatar(u.avatars && u.avatars.length ? u.avatars : u.avatar).then(d => { if (!d) return; const im = document.createElement('img'); im.referrerPolicy = 'no-referrer'; im.onload = () => { if (ph.isConnected) ph.replaceWith(im); }; setPixSrc(im, d, 16, { outline: false, alphaCut: 0, levels: 6 }); });
 }
 const stats = { joins: 0, chats: 0, likes: 0, gifts: 0, spawned: 0, dropped: 0, noId: 0 };
 function onJoin(u, src) {
@@ -737,8 +821,8 @@ function addToGallery(o) {
   const av = el.querySelector('.av'); av.referrerPolicy = 'no-referrer';
   Object.assign(av.style, { width: dd + 'px', height: dd + 'px', left: (fr.cx * size - dd / 2) + 'px', top: (fr.cy * fh - dd / 2) + 'px' });
   av.onerror = () => { av.onerror = null; av.src = defaultAvatar(o.user.nickname); };
-  av.src = o.avatar || defaultAvatar(o.user.nickname);
-  el.querySelector('.fr').src = fr.url;
+  setPixSrc(av, o.avatar || defaultAvatar(o.user.nickname), 28, { outline: false, alphaCut: 0, levels: 6 });
+  setPixSrc(el.querySelector('.fr'), fr.url, 72, { levels: 6 });
   const nm = el.querySelector('.gname'); if (nm) { nm.textContent = o.user.nickname; nm.style.fontSize = Math.max(11, Math.round(size * 0.16)) + 'px'; nm.style.maxWidth = (size + 30) + 'px'; if (o.tier.color) nm.style.color = o.tier.color; }
   // điểm xuất phát: chỗ avatar trên thẻ chúc phúc
   const f = o.from || { x: W / 2 - size / 2, y: 300, w: size };
@@ -794,6 +878,7 @@ function voiceName(n) { const s = String(n || '').replace(/[^\p{L}\p{N}\s.,'-]/g
 // ---------------- Thẻ donate ----------------
 let curCard = null;
 function frameById(id) { return frameList.find(f => f.id === id) || frameList[0]; }
+function setPixSrc(img, url, w, opts) { img.src = url; if (isPixel() && url) pixelateURL(url, w, opts).then(u => { if (img.src === url || img.dataset.orig === url) img.src = u; }); img.dataset.orig = url; }
 function defaultAvatar(name) {
   const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
   const g = x.createRadialGradient(128, 110, 10, 128, 128, 140); g.addColorStop(0, '#ffdf9a'); g.addColorStop(1, '#a8661c');
@@ -817,12 +902,12 @@ function showCard(o, instant) {
     <div class="dc-info"><div class="dc-name"></div><div class="dc-tier"></div><div class="dc-gift"></div></div>`;
   const av = el.querySelector('.av'), fimg = el.querySelector('.fr');
   if (fr) {
-    fimg.src = fr.url;
+    setPixSrc(fimg, fr.url, 150, { levels: 7 });
     const fh = fw * fr.h / fr.w, dd = fr.r * fw * 2 * 1.06;
     Object.assign(av.style, { width: dd + 'px', height: dd + 'px', left: (fr.cx * fw - dd / 2) + 'px', top: (fr.cy * fh - dd / 2) + 'px' });
   }
   av.referrerPolicy = 'no-referrer'; av.onerror = () => { av.onerror = null; av.src = defaultAvatar(o.user.nickname); };
-  av.src = o.avatar || defaultAvatar(o.user.nickname);
+  setPixSrc(av, o.avatar || defaultAvatar(o.user.nickname), 48, { outline: false, alphaCut: 0, levels: 6 });
   if (L.headText) el.querySelector('.dc-head').textContent = fill(L.headText, V);
   const nm = el.querySelector('.dc-name'); nm.textContent = o.user.nickname; nm.style.fontSize = (L.nameSize || 40) + 'px'; nm.style.display = L.showName === false ? 'none' : '';
   if (o.tier.color) nm.style.color = o.tier.color;
@@ -946,6 +1031,7 @@ function setupEdit() {
 // ---------------- Khởi động ----------------
 let lastSwitchSec = null;
 async function applyAll(first) {
+  document.body.classList.toggle('pixel', isPixel());
   try { window.LiveExtra && LiveExtra.apply(); } catch (e) { console.error(e); }
   const ss = cfg.backgrounds && cfg.backgrounds.switchSeconds; if (!first && ss !== lastSwitchSec && !bgTrans) scheduleBgSwitch(); lastSwitchSec = ss;
   computeStepK();
@@ -967,7 +1053,7 @@ async function main() {
   await applyAll(true);
   videoList = d.videos || []; initBg();
   if (cfg.voice.sermonEnabled) setTimeout(() => AudioMgr.startSermon(), 1500);
-  window.api.on('config', async c => { const charsChanged = JSON.stringify(c.characters) !== JSON.stringify(cfg.characters); cfg = c; if (charsChanged) await loadPacks(); applyAll(false); if (previewHold) showPreview(); if (gallery.length) layoutGallery(); });
+  window.api.on('config', async c => { const charsChanged = JSON.stringify(c.characters) !== JSON.stringify(cfg.characters); const styleChanged = JSON.stringify(c.style) !== JSON.stringify(cfg.style); cfg = c; if (styleChanged) slots.forEach(sl => { if (sl.img) sl.buf.ready = false; }); if (charsChanged || styleChanged) await loadPacks(); applyAll(false); if (previewHold) showPreview(); if (gallery.length) layoutGallery(); });
   window.api.on('assets', async a => { charList = a.characters; frameList = a.frames; musicList = a.music; if (a.videos) videoList = a.videos; await loadPacks(); applyAll(false); });
   window.api.on('tiktok-state', st => { try { window.LiveExtra && LiveExtra.onTikTok(st); } catch {} });
   window.api.on('live-event', ev => {

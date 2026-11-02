@@ -98,3 +98,52 @@ body.edit #cardLayer .dc-frame, body.edit #cardLayer .dfortune { pointer-events:
 #camwrap video { width: 100%; height: 100%; object-fit: cover; }
 #camwrap .cam-label { position: absolute; left: 0; right: 0; bottom: 6%; text-align: center; font: 700 15px 'Noto Serif', serif; color: #ffe7a8; text-shadow: 0 1px 3px #000; }
 body.edit #chat, body.edit #camwrap { pointer-events: auto; cursor: move; outline: 2px dashed #49f; }
+
+/* ================= GIAO DIỆN 8-BIT ================= */
+body.pixel #ui, body.pixel #ui * { font-family: 'PixelVN', monospace !important; font-style: normal !important; font-weight: 400 !important; letter-spacing: 0 !important; }
+/* font pixel nét nhất ở cỡ 16 / 32 px */
+body.pixel .board { font-size: 16px !important; }
+body.pixel .dc-name { font-size: 32px !important; }
+body.pixel .dc-tier, body.pixel .dc-gift, body.pixel .ft-title, body.pixel .ft-meaning, body.pixel .ft-level { font-size: 16px !important; }
+body.pixel .ft-verse { font-size: 32px !important; line-height: 1.25 !important; }
+body.pixel .dc-head { font-size: 32px !important; }
+body.pixel #titleBar { font-size: 32px !important; }
+body.pixel #liveinfo { font-size: 16px !important; }
+body.pixel .gitem .gname { font-size: 16px !important; }
+body.pixel img { image-rendering: pixelated; }
+body.pixel .board { border-radius: 0; border: 4px solid #f6c64e; padding: 10px 12px;
+  background: rgba(24,12,52,var(--op));
+  box-shadow: 0 0 0 4px rgba(58,20,0,calc(var(--op) + .2)), 6px 6px 0 4px rgba(0,0,0,calc(var(--op) * .8)), inset 0 0 0 3px rgba(255,236,160,calc(var(--op) * .35)); backdrop-filter: none !important; }
+body.pixel .board::before { border-radius: 0; inset: 3px; border: 2px dashed rgba(255,214,110,calc(var(--op) * .5)); }
+body.pixel .board-title { font-size: 1.05em; color: #ffe066; text-shadow: 2px 2px 0 #3a1400, -2px 0 0 #3a1400, 0 -2px 0 #3a1400, 2px 0 0 #3a1400; border-bottom: 3px solid rgba(255,214,110,.6); letter-spacing: 0; }
+body.pixel .sline { line-height: 1.35; text-shadow: 2px 2px 0 #000; color: rgba(225,215,255,.6); }
+body.pixel .sline.read { color: rgba(200,190,230,.35); }
+body.pixel .sline.cur { color: #fff27a; text-shadow: 2px 2px 0 #5a2000, 0 0 0 #000; font-weight: 400; }
+body.pixel .wrow { border-radius: 0; background: rgba(255,214,110,.12); border-left: 4px solid #f6c64e; }
+body.pixel .wrow img, body.pixel .wrow .ph { border-radius: 0; border: 2px solid #f6c64e; }
+body.pixel .wrow .wn { text-shadow: 2px 2px 0 #000; }
+body.pixel .crow { text-shadow: 2px 2px 0 #000; }
+body.pixel #titleBar { color: #ffe066; text-shadow: 3px 3px 0 #5a1e00, -2px 0 0 #3a1400, 2px 0 0 #3a1400, 0 -2px 0 #3a1400; }
+body.pixel #liveinfo { border-radius: 0; border: 3px solid #f6c64e; background: rgba(24,12,52,.75); box-shadow: 4px 4px 0 rgba(0,0,0,.6); text-shadow: 2px 2px 0 #000; }
+body.pixel #liveinfo .lv-dot { border-radius: 0; box-shadow: none; }
+/* thẻ donate 8-bit */
+body.pixel .dc-rays { background: repeating-conic-gradient(from 0deg, rgba(255,226,90,.45) 0 7.5deg, rgba(255,226,90,0) 7.5deg 15deg); -webkit-mask-image: radial-gradient(circle, #000 0, rgba(0,0,0,.6) 30%, transparent 62%); animation: spin 24s steps(48) infinite; }
+body.pixel .dc-glow { border-radius: 0; background: radial-gradient(circle, rgba(255,240,150,.7) 0 18%, rgba(255,200,60,.35) 18% 36%, rgba(255,170,40,.15) 36% 54%, transparent 54%); animation: pulse 2s steps(4) infinite; }
+body.pixel .dc-frame .fr { filter: drop-shadow(4px 4px 0 rgba(0,0,0,.6)); }
+body.pixel .dc-frame .av { border-radius: 0; clip-path: polygon(30% 0,70% 0,70% 4%,85% 4%,85% 10%,92% 10%,92% 18%,96% 18%,96% 30%,100% 30%,100% 70%,96% 70%,96% 82%,92% 82%,92% 90%,85% 90%,85% 96%,70% 96%,70% 100%,30% 100%,30% 96%,15% 96%,15% 90%,8% 90%,8% 82%,4% 82%,4% 70%,0 70%,0 30%,4% 30%,4% 18%,8% 18%,8% 10%,15% 10%,15% 4%,30% 4%); }
+body.pixel .dc-info { border-radius: 0; background: rgba(24,12,52,.82); border: 3px solid #f6c64e; box-shadow: 4px 4px 0 rgba(0,0,0,.6); padding: 6px 22px 8px; }
+body.pixel .dc-name { font-weight: 400; text-shadow: 3px 3px 0 #5a1e00, -2px 0 0 #3a1400, 2px 0 0 #3a1400, 0 -2px 0 #3a1400; }
+body.pixel .dc-tier, body.pixel .dc-gift { text-shadow: 2px 2px 0 #000; }
+body.pixel .dc-fortune { border-radius: 0; border: 4px solid #f6c64e; background: rgba(120,16,24,var(--fop)); box-shadow: 0 0 0 4px #3a0a00, 6px 6px 0 4px rgba(0,0,0,.6); }
+body.pixel .dc-fortune::before { border-radius: 0; border: 2px dashed rgba(255,214,110,.7); }
+body.pixel .ft-level { border-radius: 0; box-shadow: 2px 2px 0 #3a0a00; }
+body.pixel .ft-verse { text-shadow: 2px 2px 0 #300; }
+body.pixel .ft-title { text-shadow: 2px 2px 0 #300; }
+/* avatar treo 8-bit: nhấp nhô theo bậc */
+body.pixel .gitem .gbob { animation: gbob 3.2s steps(6) infinite; }
+body.pixel .gitem .gframe { filter: drop-shadow(3px 3px 0 rgba(0,0,0,.55)); }
+body.pixel .gitem .gframe .av { border-radius: 0; }
+body.pixel .gitem .gname { font-weight: 400; text-shadow: 2px 2px 0 #000, -1px 0 0 #000; }
+body.pixel .gitem.gone { filter: none; transform: scale(1.4) !important; opacity: 0; transition: opacity 1.2s steps(6), transform 1.2s steps(6); }
+body.pixel #camwrap { border-radius: 0; border: 4px solid #f6c64e; box-shadow: 0 0 0 4px #3a1400, 6px 6px 0 4px rgba(0,0,0,.5); }
+body.pixel #camwrap video { image-rendering: pixelated; }

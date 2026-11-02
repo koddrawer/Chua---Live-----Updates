@@ -1,4 +1,4 @@
 {
-  "version": "1.0.17",
-  "notes": "Tương tác LIVE: bảng bình luận trực tiếp, thanh LIVE giờ thật/người xem/tim, giọng trả lời bình luận theo từ khoá, khung webcam người dẫn, ngẫu nhiên hoá giao diện mỗi nick, lưu/nạp cấu hình; thêm 8 bài giảng"
+  "version": "1.0.18",
+  "notes": "Giao diện 8-bit: 3 ảnh nền pixel mới, nhân vật/khung donate/avatar dạng pixel, chữ font pixel tiếng Việt, hiệu ứng ánh sáng hạt vuông; bật/tắt ở tab Cảnh"
 }
