@@ -1,4 +1,4 @@
 {
-  "version": "1.0.4",
-  "notes": "Bỏ trạng thái đi sang trái/phải; ghi crash.log + tự tải lại cửa sổ khi lỗi; tuỳ chọn tắt tăng tốc đồ hoạ"
+  "version": "1.0.5",
+  "notes": "Sửa lỗi bản cập nhật nóng không tìm thấy thư viện (msedge-tts, tiktok-live-connector, adm-zip) — kết nối TikTok & giọng đọc hoạt động lại"
 }

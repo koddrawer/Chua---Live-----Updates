@@ -7,6 +7,12 @@ const { pathToFileURL } = require('url');
 
 const C = global.CHUA || { appDir: path.join(__dirname, '..'), appVer: '0.0.0', updatesRoot: path.join(app.getPath('userData'), 'updates'), cmpVer: () => 0, fromHot: false };
 const APP = C.appDir;
+// Bản cập nhật nóng nằm trong AppData (không có node_modules) -> luôn nạp thư viện từ thư mục cài đặt
+const ROOT = C.rootDir || path.join(__dirname, '..', '..');
+const rootRequire = require('module').createRequire(path.join(ROOT, 'package.json'));
+module.paths.unshift(path.join(ROOT, 'node_modules'));
+function loadLib(name) { try { return rootRequire(name); } catch (e) { return require(name); } }
+async function importLib(name) { try { return await import(pathToFileURL(rootRequire.resolve(name)).href); } catch (e) { return await import(name); } }
 const USER = app.getPath('userData');
 const DIRS = {
   user: path.join(USER, 'user'),
@@ -178,7 +184,7 @@ async function tiktokConnect(username, opts = {}) {
   await tiktokDisconnect(false);
   tk.wanted = true; tk.username = username;
   patchConfig({ tiktok: { username } });
-  if (!tk.lib) tk.lib = await import('tiktok-live-connector');
+  if (!tk.lib) tk.lib = await importLib('tiktok-live-connector');
   const { TikTokLiveConnection, WebcastEvent, ControlEvent } = tk.lib;
   const options = { processInitialData: false, enableExtendedGiftInfo: true, fetchRoomInfoOnConnect: true };
   if (config.tiktok.signApiKey) options.signApiKey = config.tiktok.signApiKey;
@@ -245,7 +251,7 @@ async function ttsEdge(text, o = {}) {
   const key = crypto.createHash('sha1').update([voice, rate, pitch, text].join('|')).digest('hex');
   const file = path.join(DIRS.ttsCache, key + '.mp3');
   if (fs.existsSync(file)) return fs.readFileSync(file);
-  if (!ttsLib) ttsLib = require('msedge-tts');
+  if (!ttsLib) ttsLib = loadLib('msedge-tts');
   const { MsEdgeTTS, OUTPUT_FORMAT } = ttsLib;
   const t = new MsEdgeTTS({ connectionTimeoutMs: 8000, synthesisTimeoutMs: 30000 });
   await t.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
@@ -348,7 +354,7 @@ async function applyUpdate() {
   if (!r.ok) throw new Error('Tải zip thất bại (HTTP ' + r.status + ')');
   const buf = Buffer.from(await r.arrayBuffer());
   toPanel('update-progress', { msg: 'Đang giải nén ' + (buf.length / 1048576).toFixed(1) + ' MB ...' });
-  const AdmZip = require('adm-zip');
+  const AdmZip = loadLib('adm-zip');
   const zip = new AdmZip(buf);
   const dirName = 'app-' + rv.version.replace(/[^\w.-]/g, '') + '-' + Date.now();
   const dest = path.join(C.updatesRoot, dirName);
