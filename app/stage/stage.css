@@ -3,7 +3,7 @@
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; user-select: none; cursor: default; }
 #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
 /* video nằm dưới canvas (luôn 'hiển thị' để Chromium không tạm dừng giải mã) */
-#bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 0; pointer-events: none; }
+#bg, #bg2 { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 0; pointer-events: none; }
 #ui { z-index: 2; }
 #ui { position: absolute; left: 0; top: 0; width: 720px; height: 1280px; transform-origin: 0 0; pointer-events: none; font-family: 'Noto Serif', serif; color: #fff; }
 

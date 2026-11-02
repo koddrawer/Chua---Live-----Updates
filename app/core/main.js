@@ -19,6 +19,7 @@ const DIRS = {
   characters: path.join(USER, 'user', 'characters'),
   frames: path.join(USER, 'user', 'frames'),
   music: path.join(USER, 'user', 'music'),
+  videos: path.join(USER, 'user', 'videos'),
   ttsCache: path.join(USER, 'tts-cache'),
 };
 Object.values(DIRS).forEach(d => fs.mkdirSync(d, { recursive: true }));
@@ -154,15 +155,23 @@ function listMusic() {
   for (const f of fs.readdirSync(DIRS.music)) if (AUDIO_EXT.test(f)) out.push({ id: 'user:' + f, name: f, url: fileURL(path.join(DIRS.music, f)), source: 'user' });
   return out;
 }
+function listVideos() {
+  const out = [];
+  const vd = path.join(APP, 'assets', 'video');
+  const b = readJSON(path.join(vd, 'videos.json'), [{ file: 'bg.mp4', name: 'Video nền' }]);
+  b.forEach(v => { if (fs.existsSync(path.join(vd, v.file))) out.push({ id: 'bundled:' + v.file, name: v.name || v.file, url: fileURL(path.join(vd, v.file)), source: 'bundled' }); });
+  try { for (const f of fs.readdirSync(DIRS.videos)) if (/\.(mp4|webm|mov|m4v)$/i.test(f)) out.push({ id: 'user:' + f, name: f, url: fileURL(path.join(DIRS.videos, f)), source: 'user' }); } catch {}
+  return out;
+}
 function initData() {
   return {
     config, content: loadContent(), version: C.appVer, fromHot: C.fromHot, bundledVersion: C.bundledVer,
-    characters: listCharacters(), frames: listFrames(), music: listMusic(),
+    characters: listCharacters(), frames: listFrames(), music: listMusic(), videos: listVideos(),
     assets: { base: fileURL(path.join(APP, 'assets')) + '/' }, userDir: USER,
     tiktok: tiktokState(),
   };
 }
-function refreshAssets() { broadcast('assets', { characters: listCharacters(), frames: listFrames(), music: listMusic() }); }
+function refreshAssets() { broadcast('assets', { characters: listCharacters(), frames: listFrames(), music: listMusic(), videos: listVideos() }); }
 
 // ---------------- TikTok LIVE ----------------
 let tk = { conn: null, wanted: false, username: '', status: 'disconnected', roomId: null, viewers: 0, retryTimer: null, lib: null, err: '' };
@@ -490,6 +499,8 @@ ipcMain.handle('dialog:open', async (_e, opts) => {
   return r.canceled ? [] : r.filePaths.map(p => ({ path: p, url: fileURL(p), name: path.basename(p) }));
 });
 ipcMain.handle('file:dataurl', (_e, p) => { const ext = path.extname(p).slice(1).toLowerCase(); const mime = ext === 'jpg' ? 'image/jpeg' : 'image/' + ext; return 'data:' + mime + ';base64,' + fs.readFileSync(p).toString('base64'); });
+ipcMain.handle('video:add', (_e, files) => { fs.mkdirSync(DIRS.videos, { recursive: true }); for (const f of files) fs.copyFileSync(f, path.join(DIRS.videos, path.basename(f))); refreshAssets(); return listVideos(); });
+ipcMain.handle('video:remove', (_e, id) => { if (id.startsWith('user:')) fs.rmSync(path.join(DIRS.videos, path.basename(id.slice(5))), { force: true }); refreshAssets(); return listVideos(); });
 ipcMain.handle('music:add', (_e, files) => { for (const f of files) fs.copyFileSync(f, path.join(DIRS.music, path.basename(f))); refreshAssets(); return listMusic(); });
 ipcMain.handle('music:remove', (_e, id) => { const f = id.replace(/^user:/, ''); if (id.startsWith('user:')) fs.rmSync(path.join(DIRS.music, path.basename(f)), { force: true }); refreshAssets(); return listMusic(); });
 ipcMain.handle('character:save', (_e, { folder, json, files, replace }) => {

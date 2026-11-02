@@ -23,7 +23,7 @@ const cam = { x: W / 2, y: H / 2, z: 1, anim: null };
 // ---------------- Hình học bậc thang (toạ độ theo video 720x1280) ----------------
 // [y, tâm x, nửa bề rộng mặt bậc đi được]
 const STAIRS = [[1300, 368, 300], [1180, 368, 278], [1100, 367, 255], [960, 368, 220], [880, 369, 172], [800, 372, 124], [720, 372, 80], [660, 372, 50], [640, 372, 39]];
-const START_Y = 1165, DOOR_Y = 646, EMERGE_Y = 1300;
+const START_Y = 1165, EMERGE_Y = 1300; let DOOR_Y = 690;
 function stairAt(y) {
   if (y >= STAIRS[0][0]) return { c: STAIRS[0][1], hw: STAIRS[0][2] };
   for (let i = 0; i < STAIRS.length - 1; i++) {
@@ -36,6 +36,7 @@ const BASE_HW = 255;
 function charHeightAt(y) { return stairAt(y).hw * 0.64 * (cfg ? cfg.scene.charScale : 1); }
 let STEP_K = 0.1; // dy mỗi bước = STEP_K * hw
 function computeStepK() {
+  DOOR_Y = Math.max(642, Math.min(900, (cfg.scene.vanishY || 690)));
   let I = 0; for (let y = DOOR_Y; y < START_Y; y += 1) I += 1 / stairAt(y).hw;
   const s = cfg.scene;
   const cycle = s.stepsPerBow * s.stepSeconds + s.bowSeconds;
@@ -132,7 +133,10 @@ function blessText(c) {
   const list = (content.blessings && content.blessings.length) ? content.blessings : ['Chúc {name} bình an'];
   const txt = list[Math.floor(Math.random() * list.length)].replace(/\{name\}/g, c.name);
   const h = charHeightAt(c.y);
-  floats.push({ text: txt, x: charX(c), y: c.y - h - 18, t: 0, dur: cfg.scene.blessingSeconds });
+  let y = c.y - h - 18;
+  for (let k = 0; k < 6 && floats.some(f => f.t < f.dur * 0.6 && Math.abs(f.y - y) < 32); k++) y -= 32;
+  floats.push({ text: txt, x: charX(c), y, t: 0, dur: cfg.scene.blessingSeconds });
+  if (floats.length > 6) floats.splice(0, floats.length - 6);
 }
 function charX(c) { const s = stairAt(c.y); return s.c + c.u * s.hw; }
 
@@ -285,6 +289,7 @@ function drawChar(c) {
   const h = charHeightAt(c.y);
   c.bob = (c.mode === 'walk' || c.mode === 'emerge') ? -Math.sin(Math.min(1, c.stepT / cfg.scene.stepSeconds) * Math.PI) * h * 0.012 : 0;
   drawAura(c, h);
+  if ((c.mode === 'walk' || c.mode === 'action') && !c.auraOn && c.y < DOOR_Y + 45) c.alpha = Math.min(c.alpha, 0.3 + 0.7 * Math.max(0, (c.y - DOOR_Y) / 45));
   if (c.prev && c.xf < 1) { drawSprite(c, c.prev, c.prevFlip, c.alpha * (1 - c.xf), h); drawSprite(c, c.frame, c.flip, c.alpha * c.xf, h); }
   else drawSprite(c, c.frame, c.flip, c.alpha, h);
   ctx.globalAlpha = 1;
@@ -330,16 +335,58 @@ function drawParticles() {
   ctx.restore();
 }
 // mây che phía dưới: vẽ lại phần mây của video lên trên nhân vật với dải trong suốt
-// Bộ đệm khung hình video: khi video tua lại vòng lặp / chờ dữ liệu thì vẫn vẽ khung gần nhất -> không nháy đen
+// ---------------- Video nền: nhiều video, đổi ngẫu nhiên, chuyển cảnh mờ dần ----------------
+// Mỗi video có bộ đệm khung hình riêng -> khi video tua vòng lặp/chờ dữ liệu vẫn vẽ khung gần nhất (không nháy đen)
+const video2 = document.createElement('video');
+video2.muted = true; video2.loop = true; video2.playsInline = true; video2.preload = 'auto'; video2.id = 'bg2';
+video2.style.cssText = getComputedStyle(video).cssText; video2.className = video.className;
+video.insertAdjacentElement('afterend', video2);
+function mkBuf() { const c = document.createElement('canvas'); c.width = W; c.height = H; return { c, x: c.getContext('2d'), ready: false, t: -1 }; }
+const slots = [{ el: video, buf: mkBuf(), id: null }, { el: video2, buf: mkBuf(), id: null }];
+let curSlot = 0, bgTrans = null, nextSwitchAt = 0, videoList = [];
 const vbuf = document.createElement('canvas'); vbuf.width = W; vbuf.height = H; const vbx = vbuf.getContext('2d');
-let vbufReady = false, vbufTime = -1;
-function updateVideoBuffer() {
-  if (video.readyState >= 2 && !video.seeking && video.videoWidth) {
-    const t = video.currentTime;
-    if (t !== vbufTime || !vbufReady) { vbx.drawImage(video, 0, 0, W, H); vbufTime = t; vbufReady = true; }
+let vbufReady = false;
+function grab(slot) {
+  const v = slot.el, b = slot.buf;
+  if (v.readyState >= 2 && !v.seeking && v.videoWidth) {
+    const t = v.currentTime;
+    if (t !== b.t || !b.ready) { b.x.drawImage(v, 0, 0, W, H); b.t = t; b.ready = true; }
   }
+  return b.ready;
+}
+function updateVideoBuffer() {
+  const cur = slots[curSlot];
+  const okCur = grab(cur);
+  if (bgTrans) {
+    const nx = slots[1 - curSlot]; const okNx = grab(nx);
+    if (okNx && bgTrans.start == null) bgTrans.start = performance.now();
+    const k = bgTrans.start == null ? 0 : Math.min(1, (performance.now() - bgTrans.start) / (bgTrans.dur * 1000));
+    if (okCur) { vbx.globalAlpha = 1; vbx.drawImage(cur.buf.c, 0, 0); }
+    if (okNx && k > 0) { vbx.globalAlpha = okCur ? k : 1; vbx.drawImage(nx.buf.c, 0, 0); vbx.globalAlpha = 1; }
+    vbufReady = vbufReady || okCur || okNx;
+    if (k >= 1) { // xong chuyển cảnh
+      cur.el.pause(); curSlot = 1 - curSlot; bgTrans = null; scheduleBgSwitch();
+    } else if (bgTrans && performance.now() - bgTrans.t0 > 15000) { bgTrans = null; } // video mới lỗi -> bỏ qua
+  } else if (okCur) { vbx.drawImage(cur.buf.c, 0, 0); vbufReady = true; }
   return vbufReady;
 }
+function enabledVideos() { const dis = (cfg.backgrounds && cfg.backgrounds.disabled) || []; const l = videoList.filter(v => !dis.includes(v.id)); return l.length ? l : videoList.slice(0, 1); }
+function scheduleBgSwitch() { const s = (cfg.backgrounds && cfg.backgrounds.switchSeconds) || 0; nextSwitchAt = s > 0 ? performance.now() + s * 1000 : Infinity; }
+function startBg(v, slotIdx) { const sl = slots[slotIdx]; sl.id = v.id; sl.buf.ready = false; sl.buf.t = -1; sl.el.src = v.url; sl.el.playbackRate = cfg.scene.videoRate || 1; sl.el.play().catch(() => {}); }
+function switchBg(forceId) {
+  if (bgTrans) return;
+  const list = enabledVideos(); const curId = slots[curSlot].id;
+  let pick = forceId ? list.find(v => v.id === forceId) : null;
+  if (!pick) { const others = list.filter(v => v.id !== curId); if (!others.length) { scheduleBgSwitch(); return; } pick = others[Math.floor(Math.random() * others.length)]; }
+  const ni = 1 - curSlot; startBg(pick, ni);
+  bgTrans = { dur: Math.max(0.2, (cfg.backgrounds && cfg.backgrounds.fadeSeconds) || 2), start: null, t0: performance.now() };
+}
+function initBg() {
+  const list = enabledVideos(); if (!list.length) return;
+  const first = (cfg.backgrounds && cfg.backgrounds.random !== false) ? list[Math.floor(Math.random() * list.length)] : list[0];
+  startBg(first, curSlot); scheduleBgSwitch();
+}
+setInterval(() => { if (cfg && !bgTrans && performance.now() >= nextSwitchAt) switchBg(); }, 500);
 const cloud = document.createElement('canvas'); cloud.width = W; cloud.height = 240; const cx2 = cloud.getContext('2d');
 const CLOUD_TOP = 1060;
 function drawCloudCover() {
@@ -663,7 +710,7 @@ function applyLayout() {
   }
   const tb = document.getElementById('titleBar');
   tb.textContent = L.title.text || ''; tb.style.top = L.title.y + 'px'; tb.style.display = L.title.show && L.title.text ? '' : 'none';
-  video.playbackRate = cfg.scene.videoRate || 1;
+  slots.forEach(sl => sl.el.playbackRate = cfg.scene.videoRate || 1);
 }
 let editMode = false;
 function setupEdit() {
@@ -687,7 +734,9 @@ function setupEdit() {
 }
 
 // ---------------- Khởi động ----------------
+let lastSwitchSec = null;
 async function applyAll(first) {
+  const ss = cfg.backgrounds && cfg.backgrounds.switchSeconds; if (!first && ss !== lastSwitchSec && !bgTrans) scheduleBgSwitch(); lastSwitchSec = ss;
   computeStepK();
   applyLayout();
   sermonsData = sermonSource();
@@ -705,10 +754,10 @@ async function main() {
   await loadPacks();
   AudioMgr.onSermon = onSermonLine;
   await applyAll(true);
-  video.play().catch(() => {});
+  videoList = d.videos || []; initBg();
   if (cfg.voice.sermonEnabled) setTimeout(() => AudioMgr.startSermon(), 1500);
   window.api.on('config', async c => { const charsChanged = JSON.stringify(c.characters) !== JSON.stringify(cfg.characters); cfg = c; if (charsChanged) await loadPacks(); applyAll(false); if (previewHold) showPreview(); });
-  window.api.on('assets', async a => { charList = a.characters; frameList = a.frames; musicList = a.music; await loadPacks(); applyAll(false); });
+  window.api.on('assets', async a => { charList = a.characters; frameList = a.frames; musicList = a.music; if (a.videos) videoList = a.videos; await loadPacks(); applyAll(false); });
   window.api.on('live-event', ev => {
     try {
       stats[ev.type === 'join' ? 'joins' : ev.type === 'chat' ? 'chats' : ev.type === 'gift' ? 'gifts' : 'likes']++;
@@ -726,6 +775,7 @@ async function main() {
     else if (cmd.type === 'sermon-start') AudioMgr.startSermon();
     else if (cmd.type === 'music-next') AudioMgr.nextMusic();
     else if (cmd.type === 'say') AudioMgr.say(cmd.text);
+    else if (cmd.type === 'bg-next') switchBg(cmd.id);
     else if (cmd.type === 'card-preview') { previewHold = !!cmd.hold; previewTier = cmd.tier || 0; if (previewHold) showPreview(); else hideCard(); }
     else if (cmd.type === 'zoom-test') { const c = chars.find(x => !x.removing); if (c) camFocus(c); }
   });

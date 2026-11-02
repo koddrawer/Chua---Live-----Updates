@@ -46,7 +46,8 @@
     "joinOnChat": true,
     "joinOnLike": true,
     "rejoinCooldown": 20,
-    "videoRate": 1.0
+    "videoRate": 1.0,
+    "vanishY": 690
   },
   "characters": {
     "disabled": [],
@@ -107,7 +108,8 @@
     "greetEnabled": false,
     "greetTemplate": "A Di Đà Phật, chào mừng {name} đã đến chùa.",
     "resumeDelay": 1.0,
-    "fallbackGoogle": true
+    "fallbackGoogle": true,
+    "duckFade": 0.9
   },
   "music": {
     "enabled": true,
@@ -182,5 +184,11 @@
     "sermons": null,
     "fortunes": null,
     "blessings": null
+  },
+  "backgrounds": {
+    "switchSeconds": 30,
+    "fadeSeconds": 2,
+    "random": true,
+    "disabled": []
   }
 }

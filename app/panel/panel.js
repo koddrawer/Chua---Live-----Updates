@@ -291,6 +291,21 @@ const sendHold = () => window.api.stageCmd({ type: 'card-preview', hold: $('#car
 $('#cardHold').onchange = sendHold; $('#cardHoldTier').onchange = sendHold;
 $('#resetCard').onclick = async () => { if (!confirm('Khôi phục mặc định thẻ & ô quẻ?')) return; await window.api.resetConfig('layout.card'); await window.api.resetConfig('layout.fortune'); };
 
+function renderVideos() {
+  const box = $('#videoList'); if (!box) return; box.innerHTML = '';
+  const dis = (cfg.backgrounds && cfg.backgrounds.disabled) || [];
+  for (const v of D.videos || []) {
+    const el = document.createElement('div'); el.className = 'mi';
+    el.innerHTML = `<input type="checkbox" ${dis.includes(v.id) ? '' : 'checked'}><span>${esc(v.name)}</span><button class="mini now">phát ngay</button>${v.source === 'user' ? '<button class="mini danger del">xoá</button>' : ''}`;
+    el.querySelector('input').onchange = e => { let d = ((cfg.backgrounds && cfg.backgrounds.disabled) || []).filter(x => x !== v.id); if (!e.target.checked) d.push(v.id); window.api.setConfig('backgrounds.disabled', d); };
+    el.querySelector('.now').onclick = () => window.api.stageCmd({ type: 'bg-next', id: v.id });
+    const del = el.querySelector('.del'); if (del) del.onclick = () => { if (confirm('Xoá video này?')) window.api.removeVideo(v.id); };
+    box.appendChild(el);
+  }
+}
+$('#btnAddVideo').onclick = async () => { const f = await window.api.openDialog({ multi: true, filters: [{ name: 'Video', extensions: ['mp4', 'webm', 'mov', 'm4v'] }] }); if (f.length) await window.api.addVideo(f.map(x => x.path)); };
+$('#btnNextBg').onclick = () => window.api.stageCmd({ type: 'bg-next' });
+
 // ---------- Âm thanh ----------
 $('#btnVoiceTest').onclick = async () => {
   const m = $('#voiceTestMsg'); m.textContent = 'Đang kiểm tra…'; m.className = 'small';
@@ -364,15 +379,15 @@ $('#btnApply').onclick = async () => { $('#updMsg').textContent = 'Đang cập n
 $('#btnRollback').onclick = () => { if (confirm('Quay về phiên bản đi kèm bộ cài?')) window.api.rollback(); };
 
 // ---------- Khởi động ----------
-function renderAll() { fillInputs(); renderChars(); renderTiers(); renderFrames(); renderVoices(); renderMusic(); }
+function renderAll() { renderVideos(); fillInputs(); renderChars(); renderTiers(); renderFrames(); renderVoices(); renderMusic(); }
 (async function main() {
   D = await window.api.init(); cfg = D.config;
   $('#ver').textContent = 'v' + D.version + (D.fromHot ? ' (cập nhật)' : '');
   $('#verInfo').innerHTML = `Đang chạy: <b>v${esc(D.version)}</b>${D.fromHot ? ' — bản cập nhật nóng' : ''}<br>Bản đi kèm bộ cài: v${esc(D.bundledVersion)}<br><span class="muted small">Dữ liệu: ${esc(D.userDir)}</span>`;
   bindInputs(); renderAll(); loadContentEditors(false); showTk(D.tiktok);
   $('#ttsCount').textContent = await window.api.ttsCount();
-  window.api.on('config', c => { const tiersChanged = JSON.stringify(c.tiers) !== JSON.stringify(cfg.tiers); const chChanged = JSON.stringify(c.characters) !== JSON.stringify(cfg.characters); const muChanged = JSON.stringify(c.music.playlist) !== JSON.stringify(cfg.music.playlist); cfg = c; fillInputs(); if (tiersChanged) renderTiers(); if (chChanged) renderChars(); if (muChanged) renderMusic(); });
-  window.api.on('assets', a => { D.characters = a.characters; D.frames = a.frames; D.music = a.music; renderChars(); renderTiers(); renderFrames(); renderMusic(); });
+  window.api.on('config', c => { const tiersChanged = JSON.stringify(c.tiers) !== JSON.stringify(cfg.tiers); const chChanged = JSON.stringify(c.characters) !== JSON.stringify(cfg.characters); const muChanged = JSON.stringify(c.music.playlist) !== JSON.stringify(cfg.music.playlist); const bgChanged = JSON.stringify(c.backgrounds) !== JSON.stringify(cfg.backgrounds); cfg = c; fillInputs(); if (tiersChanged) renderTiers(); if (chChanged) renderChars(); if (muChanged) renderMusic(); if (bgChanged) renderVideos(); });
+  window.api.on('assets', a => { D.characters = a.characters; D.frames = a.frames; D.music = a.music; if (a.videos) { D.videos = a.videos; renderVideos(); } renderChars(); renderTiers(); renderFrames(); renderMusic(); });
   window.api.on('log', addLog);
   window.api.on('tiktok-state', showTk);
   window.api.on('update-state', r => { if (r.newer) $('#updMsg').textContent = `Có bản mới ${r.remote} — bấm “Cập nhật & khởi động lại”.`; });

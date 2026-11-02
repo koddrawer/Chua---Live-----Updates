@@ -126,6 +126,20 @@
       <label>Thẻ chúc phúc hiện (giây)<input type="number" step="0.5" data-k="scene.cardSeconds"></label>
     </div>
   </div>
+  <div class="card">
+    <h3>Video nền <span class="muted small">— đổi ngẫu nhiên giữa các video được chọn, chuyển cảnh mờ dần</span></h3>
+    <div class="grid3">
+      <label>Đổi video sau mỗi (giây, 0 = không đổi)<input type="number" min="0" data-k="backgrounds.switchSeconds"></label>
+      <label>Thời gian chuyển cảnh mờ dần (giây)<input type="number" step="0.1" min="0.2" data-k="backgrounds.fadeSeconds"></label>
+      <label class="chk"><input type="checkbox" data-k="backgrounds.random"> Video đầu tiên chọn ngẫu nhiên</label>
+    </div>
+    <div id="videoList" class="musiclist"></div>
+    <div class="row"><button id="btnAddVideo">+ Thêm video nền</button><button id="btnNextBg">Đổi video ngay</button></div>
+    <p class="muted small">Video nên cùng bố cục bậc thang như video mẫu (720×1280) để nhân vật đi đúng bậc.</p>
+  </div>
+  <div class="card"><h3>Biến mất ở cửa chùa</h3>
+    <label>Vị trí biến mất (toạ độ Y, nhỏ hơn = đi lên cao hơn; cửa chùa ≈ 650, mặc định 690)<input type="number" data-k="scene.vanishY"></label>
+  </div>
   <div class="row"><button id="resetScene">Khôi phục mặc định phần Cảnh</button></div>
 </section>
 

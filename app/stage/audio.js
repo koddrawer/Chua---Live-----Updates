@@ -66,7 +66,7 @@
       try { url = cfg.voice.engine === 'system' || cfg.voice.engine === 'off' ? null : await getVoiceURL(text, voice, rate, pitch); } catch (e) { url = null; }
       if (ctl.cancelled) return resolve('cancel');
       if (url) {
-        el.src = url; el.volume = Math.min(1, volume); el.currentTime = 0;
+        clearInterval(el._fadeIv); el.src = url; el.volume = Math.min(1, volume); el.currentTime = 0;
         el.onended = () => resolve('end'); el.onerror = () => resolve('err');
         ctl.audio = el;
         el.play().catch(() => resolve('err'));
@@ -118,20 +118,38 @@
     if (thanksBusy) { S.paused = true; return; }
     S.gapTimer = setTimeout(sermonStep, gap);
   }
-  function pauseSermon() {
+  // giảm/tăng âm lượng mượt
+  function fadeVol(el, to, ms) {
+    return new Promise(res => {
+      const from = el.volume, t0 = performance.now();
+      clearInterval(el._fadeIv);
+      if (ms <= 0) { el.volume = Math.max(0, Math.min(1, to)); return res(); }
+      el._fadeIv = setInterval(() => {
+        const k = Math.min(1, (performance.now() - t0) / ms);
+        el.volume = Math.max(0, Math.min(1, from + (to - from) * (k * k * (3 - 2 * k))));
+        if (k >= 1) { clearInterval(el._fadeIv); res(); }
+      }, 30);
+    });
+  }
+  async function pauseSermon() {
+    const fadeMs = (cfg.voice.duckFade ?? 0.9) * 1000;
     if (S.gapTimer) { clearTimeout(S.gapTimer); S.gapTimer = null; S.paused = true; S.resumeMode = 'next'; return; }
     if (S.ctl) {
       S.paused = true;
-      if (S.ctl.audio && !S.ctl.audio.ended) { S.ctl.audio.pause(); S.resumeMode = 'audio'; }
+      const a = S.ctl.audio;
+      if (a && !a.ended && !a.paused) { S.resumeMode = 'audio'; await fadeVol(a, 0, fadeMs); if (S.paused) a.pause(); }
+      else if (a && !a.ended) { S.resumeMode = 'audio'; a.pause(); }
       else if (S.ctl.synth) { speechSynthesis.cancel(); S.resumeMode = 'repeat'; }
       else if (S.ctl.silent) { clearTimeout(S.ctl.timer); S.resumeMode = 'repeat'; }
-      else S.resumeMode = 'repeat';
+      else { S.ctl.cancelled = true; S.resumeMode = 'repeat'; S.ctl.cancel && S.ctl.cancel(); } // đang tải giọng -> huỷ, đọc lại câu sau
     }
   }
   function resumeSermon() {
     if (!S.paused) { if (!S.playing && !S.gapTimer && !S.stopped) sermonStep(); return; }
     S.paused = false;
-    if (S.resumeMode === 'audio' && S.ctl && S.ctl.audio) { S.ctl.audio.play().catch(() => {}); return; }
+    if (S.resumeMode === 'audio' && S.ctl && S.ctl.audio) {
+      const a = S.ctl.audio; a.volume = 0; a.play().catch(() => {}); fadeVol(a, Math.min(1, cfg.voice.sermonVolume), 700); return;
+    }
     if (S.resumeMode === 'repeat') { S.line = Math.max(-1, S.line - 1); S.ctl && S.ctl.cancel && S.ctl.cancel(); S.ctl = null; }
     S.playing = false; sermonStep();
   }
@@ -152,7 +170,7 @@
     if (thanksBusy || !queue.length) return;
     clearTimeout(resumeTimer);
     thanksBusy = true;
-    pauseSermon();
+    await pauseSermon();
     while (queue.length) {
       const it = queue.shift();
       if (cfg.voice.engine === 'off') { it.res(); continue; }

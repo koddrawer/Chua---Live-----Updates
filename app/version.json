@@ -1,4 +1,4 @@
 {
-  "version": "1.0.11",
-  "notes": "Sửa nháy đen màn hình khi video nền lặp lại (đệm khung hình); chống tải lại liên tục khi lỗi đồ hoạ"
+  "version": "1.0.12",
+  "notes": "Thêm 2 video nền (Quan Âm, La Hán), đổi ngẫu nhiên với chuyển cảnh mờ dần; nhân vật mờ dần và biến mất ở cửa chùa (chỉnh được vị trí); lời giảng nhỏ dần trước khi đọc cảm ơn"
 }

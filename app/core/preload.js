@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('api', {
   stageSet: o => ipcRenderer.invoke('stage:set', o),
   openDialog: o => ipcRenderer.invoke('dialog:open', o),
   fileDataURL: p => ipcRenderer.invoke('file:dataurl', p),
+  addVideo: f => ipcRenderer.invoke('video:add', f),
+  removeVideo: id => ipcRenderer.invoke('video:remove', id),
   addMusic: f => ipcRenderer.invoke('music:add', f),
   removeMusic: id => ipcRenderer.invoke('music:remove', id),
   saveCharacter: o => ipcRenderer.invoke('character:save', o),
