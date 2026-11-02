@@ -722,7 +722,7 @@ function welcome(u) {
   const n = document.createElement('div'); n.className = 'wn'; n.innerHTML = '<b></b> vừa vào chùa'; n.querySelector('b').textContent = u.nickname; row.appendChild(n);
   list.prepend(row);
   while (list.children.length > (cfg.layout.welcome.max || 6)) list.lastElementChild.remove();
-  if (u.avatar) window.api.avatar(u.avatars && u.avatars.length ? u.avatars : u.avatar).then(d => { if (!d) return; const im = document.createElement('img'); im.referrerPolicy = 'no-referrer'; im.onload = () => { if (ph.isConnected) ph.replaceWith(im); }; setPixSrc(im, d, 16, { outline: false, alphaCut: 0, levels: 6 }); });
+  if (u.avatar) window.api.avatar(u.avatars && u.avatars.length ? u.avatars : u.avatar).then(d => { if (!d) return; const im = document.createElement('img'); im.referrerPolicy = 'no-referrer'; im.onload = () => { if (ph.isConnected) ph.replaceWith(im); }; im.src = d; });
 }
 const stats = { joins: 0, chats: 0, likes: 0, gifts: 0, spawned: 0, dropped: 0, noId: 0 };
 function onJoin(u, src) {
@@ -821,7 +821,7 @@ function addToGallery(o) {
   const av = el.querySelector('.av'); av.referrerPolicy = 'no-referrer';
   Object.assign(av.style, { width: dd + 'px', height: dd + 'px', left: (fr.cx * size - dd / 2) + 'px', top: (fr.cy * fh - dd / 2) + 'px' });
   av.onerror = () => { av.onerror = null; av.src = defaultAvatar(o.user.nickname); };
-  setPixSrc(av, o.avatar || defaultAvatar(o.user.nickname), 28, { outline: false, alphaCut: 0, levels: 6 });
+  av.src = o.avatar || defaultAvatar(o.user.nickname);
   setPixSrc(el.querySelector('.fr'), fr.url, 72, { levels: 6 });
   const nm = el.querySelector('.gname'); if (nm) { nm.textContent = o.user.nickname; nm.style.fontSize = Math.max(11, Math.round(size * 0.16)) + 'px'; nm.style.maxWidth = (size + 30) + 'px'; if (o.tier.color) nm.style.color = o.tier.color; }
   // điểm xuất phát: chỗ avatar trên thẻ chúc phúc
@@ -907,7 +907,7 @@ function showCard(o, instant) {
     Object.assign(av.style, { width: dd + 'px', height: dd + 'px', left: (fr.cx * fw - dd / 2) + 'px', top: (fr.cy * fh - dd / 2) + 'px' });
   }
   av.referrerPolicy = 'no-referrer'; av.onerror = () => { av.onerror = null; av.src = defaultAvatar(o.user.nickname); };
-  setPixSrc(av, o.avatar || defaultAvatar(o.user.nickname), 48, { outline: false, alphaCut: 0, levels: 6 });
+  av.src = o.avatar || defaultAvatar(o.user.nickname);
   if (L.headText) el.querySelector('.dc-head').textContent = fill(L.headText, V);
   const nm = el.querySelector('.dc-name'); nm.textContent = o.user.nickname; nm.style.fontSize = (L.nameSize || 40) + 'px'; nm.style.display = L.showName === false ? 'none' : '';
   if (o.tier.color) nm.style.color = o.tier.color;

@@ -1,4 +1,4 @@
 {
-  "version": "1.0.18",
-  "notes": "Giao diện 8-bit: 3 ảnh nền pixel mới, nhân vật/khung donate/avatar dạng pixel, chữ font pixel tiếng Việt, hiệu ứng ánh sáng hạt vuông; bật/tắt ở tab Cảnh"
+  "version": "1.0.19",
+  "notes": "Giao diện 8-bit: avatar người xem và người donate giữ ảnh thật (không pixel hoá)"
 }
