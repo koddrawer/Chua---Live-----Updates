@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Chùa Live — Bảng điều khiển</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file: data: blob:; img-src 'self' file: data: blob: https:; media-src 'self' file: data: blob:; style-src 'self' 'unsafe-inline' file:; font-src 'self' file: data:; script-src 'self' file:">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="panel.css">
+</head>
+<body>
+<header>
+  <div class="brand">🪷 <b>Chùa Live</b> <span id="ver" class="muted"></span></div>
+  <div class="hstat"><span id="tkDot" class="dot"></span><span id="tkText">Chưa kết nối</span></div>
+  <div class="hstat" id="stats">—</div>
+</header>
+<nav id="tabs">
+  <button data-tab="live" class="on">Kết nối LIVE</button>
+  <button data-tab="test">Kiểm thử</button>
+  <button data-tab="scene">Cảnh & thời gian</button>
+  <button data-tab="chars">Nhân vật & hoạt ảnh</button>
+  <button data-tab="donate">Donate & khung</button>
+  <button data-tab="audio">Giọng & nhạc</button>
+  <button data-tab="content">Lời giảng & quẻ</button>
+  <button data-tab="layout">Bố cục màn hình</button>
+  <button data-tab="update">Cập nhật</button>
+</nav>
+<main>
+<!-- ============ LIVE ============ -->
+<section id="tab-live" class="tab on">
+  <div class="grid2">
+    <div class="card">
+      <h3>Tài khoản TikTok</h3>
+      <label>Tên tài khoản (@username)<input id="tkUser" placeholder="vd: chuabinhan"></label>
+      <div class="row"><button id="btnConnect" class="primary">Kết nối</button><button id="btnDisconnect">Ngắt</button></div>
+      <label class="chk"><input type="checkbox" data-k="tiktok.autoConnect"> Tự kết nối khi mở app</label>
+      <details><summary>Nâng cao</summary>
+        <label>Euler Stream API key (không bắt buộc, giúp kết nối ổn định hơn)<input data-k="tiktok.signApiKey" type="password" placeholder="để trống nếu không có"></label>
+        <label>Thử kết nối lại sau (giây)<input type="number" data-k="tiktok.retrySeconds" min="5"></label>
+      </details>
+      <p class="muted small" id="tkErr"></p>
+    </div>
+    <div class="card">
+      <h3>Cửa sổ màn hình 9:16</h3>
+      <div class="row wrap">
+        <button id="btnStageOpen" class="primary">Mở màn hình LIVE</button>
+        <button id="btnStageClose">Đóng</button>
+        <button data-size="960">540×960</button><button data-size="1280">720×1280</button><button data-size="1920">1080×1920</button>
+        <button id="btnFull">Toàn màn hình</button>
+        <button id="btnReload">Tải lại</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="optTop"> Luôn nằm trên cùng</label>
+      <label class="chk"><input type="checkbox" id="optFrame"> Hiện viền cửa sổ (tắt viền để capture gọn trong TikTok LIVE Studio/OBS)</label>
+      <label class="chk"><input type="checkbox" data-k="window.openStageOnStart"> Mở màn hình LIVE khi khởi động</label>
+      <div class="row"><button id="btnClear">Xoá hết nhân vật</button></div>
+      <p class="muted small">Trong TikTok LIVE Studio: thêm nguồn <b>Window Capture</b> → chọn cửa sổ “Chùa Live — Màn hình LIVE 9:16”.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Nhật ký <button id="btnLogClear" class="mini">xoá</button></h3>
+    <div id="log" class="log"></div>
+  </div>
+</section>
+
+<!-- ============ TEST ============ -->
+<section id="tab-test" class="tab">
+  <div class="grid2">
+    <div class="card">
+      <h3>Giả lập người xem</h3>
+      <div class="row wrap">
+        <button id="simJoin1">+1 người vào live</button>
+        <button id="simJoin5">+5 người</button>
+        <button id="simJoin20">+20 người</button>
+        <button id="simChat">+1 bình luận</button>
+      </div>
+      <label>Tên tuỳ chọn<input id="simName" placeholder="để trống = tên ngẫu nhiên"></label>
+    </div>
+    <div class="card">
+      <h3>Giả lập donate</h3>
+      <div id="simTiers" class="row wrap"></div>
+      <div class="row"><input id="simCoins" type="number" value="5" min="1" style="width:110px"><button id="simGift">Tặng số xu này</button><button id="simGiftSame">Người vừa vào tặng</button></div>
+    </div>
+    <div class="card">
+      <h3>Thử giọng & hiệu ứng</h3>
+      <textarea id="sayText" rows="2">A Di Đà Phật, xin cảm ơn quý Phật tử đã đến với chùa.</textarea>
+      <div class="row"><button id="btnSay">Đọc thử (ngắt lời giảng)</button><button id="btnZoom">Thử zoom camera</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCENE ============ -->
+<section id="tab-scene" class="tab">
+  <div class="grid3">
+    <div class="card">
+      <h3>Người xem</h3>
+      <label>Thời gian hiện tên (giây)<input type="number" step="1" data-k="scene.nameSeconds"></label>
+      <label class="chk"><input type="checkbox" data-k="scene.hideWithName"> Nhân vật biến mất cùng lúc với tên</label>
+      <label class="chk"><input type="checkbox" data-k="scene.showNames"> Hiện tên trên đầu</label>
+      <label>Cỡ chữ tên<input type="number" data-k="scene.nameFontSize"></label>
+      <label>Chữ chúc phúc hiện (giây)<input type="number" step="0.5" data-k="scene.blessingSeconds"></label>
+      <label class="chk"><input type="checkbox" data-k="scene.joinOnChat"> Người bình luận cũng xuất hiện</label>
+      <label class="chk"><input type="checkbox" data-k="scene.joinOnLike"> Người thả tim / follow / share cũng xuất hiện</label>
+      <label>Không cho xuất hiện lại trong (giây)<input type="number" data-k="scene.rejoinCooldown"></label>
+    </div>
+    <div class="card">
+      <h3>Leo bậc thang</h3>
+      <label>Thời gian leo từ chân lên cửa chùa (giây)<input type="number" data-k="scene.climbSeconds"></label>
+      <label>Số bước rồi cúi chào 1 lần<input type="number" min="1" data-k="scene.stepsPerBow"></label>
+      <label>Thời gian 1 bước (giây)<input type="number" step="0.05" data-k="scene.stepSeconds"></label>
+      <label>Thời gian cúi chào (giây)<input type="number" step="0.1" data-k="scene.bowSeconds"></label>
+      <label>Tỉ lệ đi sang trái/phải (0–1)<input type="number" step="0.05" min="0" max="1" data-k="scene.sideWalkChance"></label>
+      <label>Kích thước nhân vật (×)<input type="number" step="0.05" data-k="scene.charScale"></label>
+      <label>Tốc độ video nền<input type="number" step="0.1" data-k="scene.videoRate"></label>
+    </div>
+    <div class="card">
+      <h3>Số lượng & donate</h3>
+      <label>Tối đa nhân vật trên màn hình<input type="number" data-k="scene.maxCharacters"></label>
+      <label>Khoảng cách xuất hiện giữa 2 người (giây)<input type="number" step="0.1" data-k="scene.spawnInterval"></label>
+      <label>Người đi chùa tự do khi vắng<input type="number" data-k="scene.idleCount"></label>
+      <label>… khi đã có người xem<input type="number" data-k="scene.idleWhenViewers"></label>
+      <label>Cứ bao nhiêu giây thêm 1 người tự do<input type="number" step="0.5" data-k="scene.idleSpawnSeconds"></label>
+      <label>Zoom camera (×)<input type="number" step="0.1" data-k="scene.zoomScale"></label>
+      <label>Giữ zoom (giây)<input type="number" step="0.1" data-k="scene.zoomHold"></label>
+      <label>Thời gian zoom vào/ra (giây)<input type="number" step="0.05" data-k="scene.zoomEase"></label>
+      <label>Độ sáng hào quang<input type="number" step="0.1" data-k="scene.auraIntensity"></label>
+      <label>Thẻ chúc phúc hiện (giây)<input type="number" step="0.5" data-k="scene.cardSeconds"></label>
+    </div>
+  </div>
+  <div class="row"><button id="resetScene">Khôi phục mặc định phần Cảnh</button></div>
+</section>
+
+<!-- ============ CHARACTERS ============ -->
+<section id="tab-chars" class="tab">
+  <div class="card">
+    <h3>Danh sách nhân vật <span class="muted small">— mỗi người vào live được gán ngẫu nhiên theo trọng số</span></h3>
+    <div class="row"><button id="btnImportSheet" class="primary">+ Thêm nhân vật từ sprite sheet</button><button id="btnOpenUser">Mở thư mục dữ liệu</button></div>
+    <div id="charList" class="charlist"></div>
+  </div>
+  <p class="muted small">Sprite sheet chuẩn (giống ảnh mẫu): hàng trên 4 dáng đi ngang (quay mặt sang trái) + 2 dáng đi về phía trước; hàng dưới 2 dáng đi lên (lưng) + cúi chào + quỳ + vái lạy. Ảnh PNG nền trong suốt. Có thể gán lại từng khung cho từng trạng thái.</p>
+</section>
+
+<!-- ============ DONATE ============ -->
+<section id="tab-donate" class="tab">
+  <div class="card">
+    <h3>Mức donate <span class="muted small">— người tặng ≥ mức nào thì dùng khung & quẻ của mức đó</span></h3>
+    <div id="tierList"></div>
+    <div class="row"><button id="btnAddTier">+ Thêm mức</button><button id="btnImportFrame">+ Nhập khung avatar (PNG)</button></div>
+  </div>
+  <div class="card">
+    <h3>Khung trang trí đang có</h3>
+    <div id="frameList" class="framelist"></div>
+  </div>
+  <div class="card">
+    <h3>Thẻ avatar donate <span class="muted small">— bật “Giữ thẻ” rồi chỉnh, màn hình LIVE cập nhật ngay. Ở tab Bố cục bật kéo-thả để kéo avatar/ô quẻ, lăn chuột để phóng to/thu nhỏ</span></h3>
+    <div class="row"><label class="chk"><input type="checkbox" id="cardHold"> Giữ thẻ xem thử trên màn hình</label><select id="cardHoldTier"></select></div>
+    <div class="grid3">
+      <div>
+        <h3>Thời gian</h3>
+        <label>Thẻ hiện bao lâu (giây) — mặc định cho mọi mức<input type="number" step="0.5" data-k="scene.cardSeconds"></label>
+        <label>Chờ sau khi zoom rồi mới hiện (giây)<input type="number" step="0.1" min="0" data-k="layout.card.delay"></label>
+        <label>Số lần vái lạy mặc định<input type="number" data-k="scene.kneelRounds"></label>
+        <p class="muted small">Thẻ luôn hiện ít nhất đến khi đọc xong lời cảm ơn. Mỗi mức donate có thể đặt thời gian riêng ở cột “Hiện (giây)” (0 = theo mặc định).</p>
+      </div>
+      <div>
+        <h3>Avatar & nội dung</h3>
+        <div class="grid2">
+          <label>Vị trí X (tâm)<input type="number" data-k="layout.card.x"></label>
+          <label>Vị trí Y (trên)<input type="number" data-k="layout.card.y"></label>
+          <label>Kích thước khung<input type="number" data-k="layout.card.size"></label>
+          <label>Cỡ chữ tên<input type="number" data-k="layout.card.nameSize"></label>
+        </div>
+        <label>Dòng tiêu đề phía trên (để trống = ẩn)<input data-k="layout.card.headText" placeholder="vd: Cảm tạ thí chủ"></label>
+        <label class="chk"><input type="checkbox" data-k="layout.card.showName"> Hiện tên</label>
+        <label class="chk"><input type="checkbox" data-k="layout.card.showTier"> Hiện dòng danh hiệu</label>
+        <label>Dòng danh hiệu<input data-k="layout.card.tierText"></label>
+        <label class="chk"><input type="checkbox" data-k="layout.card.showGift"> Hiện dòng quà tặng</label>
+        <label>Dòng quà tặng<input data-k="layout.card.giftText"></label>
+        <label class="chk"><input type="checkbox" data-k="layout.card.showRays"> Hiệu ứng tia sáng sau avatar</label>
+      </div>
+      <div>
+        <h3>Ô hiện quẻ</h3>
+        <label class="chk"><input type="checkbox" data-k="layout.fortune.show"> Hiện ô quẻ</label>
+        <div class="grid2">
+          <label>Vị trí X (tâm)<input type="number" data-k="layout.fortune.x"></label>
+          <label>Vị trí Y (trên)<input type="number" data-k="layout.fortune.y"></label>
+          <label>Chiều rộng<input type="number" data-k="layout.fortune.w"></label>
+          <label>Tỉ lệ (cỡ chữ ×)<input type="number" step="0.05" data-k="layout.fortune.scale"></label>
+        </div>
+        <label>Độ trong suốt nền ô quẻ<input type="range" min="0" max="1" step="0.01" data-k="layout.fortune.opacity"></label>
+        <label>Tiêu đề quẻ<input data-k="layout.fortune.titleText"></label>
+        <label class="chk"><input type="checkbox" data-k="layout.fortune.showLevel"> Hiện mức quẻ (Cát, Đại Cát…)</label>
+        <label class="chk"><input type="checkbox" data-k="layout.fortune.showVerse"> Hiện 2 câu thơ</label>
+        <label class="chk"><input type="checkbox" data-k="layout.fortune.showMeaning"> Hiện ý nghĩa</label>
+      </div>
+    </div>
+    <p class="muted small">Biến dùng trong các dòng chữ: {name} tên · {tier} danh hiệu · {gift} quà · {coins} số xu · {fortuneName} tên quẻ · {level} mức quẻ · {fortune} ý nghĩa · {verse} câu thơ. Toạ độ theo khung 720×1280.</p>
+    <div class="row"><button id="resetCard">Khôi phục mặc định thẻ & ô quẻ</button></div>
+  </div>
+</section>
+
+<!-- ============ AUDIO ============ -->
+<section id="tab-audio" class="tab">
+  <div class="grid2">
+    <div class="card">
+      <h3>Giọng đọc</h3>
+      <label>Bộ đọc
+        <select data-k="voice.engine"><option value="edge">Giọng AI Microsoft (cần Internet, hay nhất)</option><option value="google">Giọng Google (cần Internet)</option><option value="system">Giọng có sẵn trong Windows (cần cài giọng tiếng Việt)</option><option value="off">Tắt giọng (chỉ hiện chữ)</option></select></label>
+      <label class="chk"><input type="checkbox" data-k="voice.fallbackGoogle"> Nếu giọng Microsoft lỗi thì tự chuyển sang giọng Google</label>
+      <div class="row"><button id="btnVoiceTest" class="primary">Kiểm tra giọng</button><span id="voiceTestMsg" class="small"></span></div>
+      <label>Giọng giảng pháp<select data-k="voice.voice" class="voiceSel"></select></label>
+      <label>Giọng cảm ơn / đọc quẻ<select data-k="voice.thanksVoice" class="voiceSel"></select></label>
+      <div class="grid2">
+        <label>Tốc độ giảng (%)<input type="number" data-k="voice.rate"></label>
+        <label>Cao độ giảng (Hz)<input type="number" data-k="voice.pitch"></label>
+        <label>Tốc độ cảm ơn (%)<input type="number" data-k="voice.thanksRate"></label>
+        <label>Tiếp tục giảng sau (giây)<input type="number" step="0.5" data-k="voice.resumeDelay"></label>
+        <label>Âm lượng giảng<input type="range" min="0" max="1" step="0.05" data-k="voice.sermonVolume"></label>
+        <label>Âm lượng cảm ơn<input type="range" min="0" max="1" step="0.05" data-k="voice.thanksVolume"></label>
+      </div>
+      <label>Mẫu lời cảm ơn & đọc quẻ — biến: {name} tên · {gift} quà · {fortuneName} tên quẻ · {level} mức quẻ · {verse} 2 câu thơ · {fortune} ý nghĩa · {coins} xu · {tier} danh hiệu<textarea rows="5" data-k="voice.thanksTemplate"></textarea></label>
+      <div class="row"><button id="btnThanksTest">Nghe thử lời cảm ơn + quẻ</button><button id="btnThanksDefault" class="mini">mẫu mặc định</button></div>
+      <label class="chk"><input type="checkbox" data-k="voice.greetEnabled"> Đọc lời chào người mới vào</label>
+      <label>Mẫu lời chào<input data-k="voice.greetTemplate"></label>
+      <div class="row"><span class="muted small">Bộ nhớ giọng đã tạo: <b id="ttsCount">0</b> câu</span><button id="btnTtsClear" class="mini">xoá cache</button></div>
+    </div>
+    <div class="card">
+      <h3>Lời giảng</h3>
+      <label class="chk"><input type="checkbox" data-k="voice.sermonEnabled"> Phát lời giảng liên tục</label>
+      <label class="chk"><input type="checkbox" data-k="voice.shuffleSections"> Chọn bài ngẫu nhiên</label>
+      <div class="grid2">
+        <label>Nghỉ giữa các câu (giây)<input type="number" step="0.1" data-k="voice.sermonGap"></label>
+        <label>Nghỉ giữa các bài (giây)<input type="number" step="0.5" data-k="voice.sectionGap"></label>
+      </div>
+      <h3>Nhạc nền</h3>
+      <label class="chk"><input type="checkbox" data-k="music.enabled"> Bật nhạc nền</label>
+      <div class="grid2">
+        <label>Âm lượng nhạc<input type="range" min="0" max="1" step="0.02" data-k="music.volume"></label>
+        <label>Nhạc khi đang đọc cảm ơn<input type="range" min="0" max="1" step="0.02" data-k="music.duckVolume"></label>
+      </div>
+      <label class="chk"><input type="checkbox" data-k="music.shuffle"> Phát ngẫu nhiên</label>
+      <div id="musicList" class="musiclist"></div>
+      <div class="row"><button id="btnAddMusic">+ Thêm nhạc</button><button id="btnNextMusic">Bài tiếp</button></div>
+      <h3>Hiệu ứng âm thanh</h3>
+      <label class="chk"><input type="checkbox" data-k="sfx.bell"> Tiếng chuông khi quỳ lạy</label>
+      <label class="chk"><input type="checkbox" data-k="sfx.chime"> Tiếng chuông gió khi có người vào</label>
+      <label>Âm lượng hiệu ứng<input type="range" min="0" max="1" step="0.05" data-k="sfx.volume"></label>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTENT ============ -->
+<section id="tab-content" class="tab">
+  <div class="card">
+    <h3>Nguồn nội dung</h3>
+    <label class="chk"><input type="checkbox" id="useCustom"> Dùng nội dung tự soạn bên dưới (bỏ chọn = dùng nội dung mặc định, tự cập nhật theo bản mới)</label>
+    <div class="row"><button id="btnSaveContent" class="primary">Lưu nội dung</button><button id="btnLoadDefault">Nạp lại nội dung mặc định vào ô soạn</button></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Bài giảng <span class="muted small">— mỗi bài bắt đầu bằng dòng “## Tên bài”, mỗi câu 1 dòng</span></h3>
+      <textarea id="edSermons" rows="24" spellcheck="false"></textarea>
+      <div id="sermonJump" class="row wrap"></div>
+    </div>
+    <div class="card">
+      <h3>Lời quẻ <span class="muted small">— mỗi dòng: Tên quẻ | câu thơ 1 | câu thơ 2 | ý nghĩa</span></h3>
+      <textarea id="edFortunes" rows="12" spellcheck="false"></textarea>
+      <h3>Chữ chúc phúc khi tên biến mất <span class="muted small">— mỗi dòng 1 câu, {name} = tên</span></h3>
+      <textarea id="edBlessings" rows="8" spellcheck="false"></textarea>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LAYOUT ============ -->
+<section id="tab-layout" class="tab">
+  <div class="card">
+    <div class="row"><label class="chk big"><input type="checkbox" id="editLayout"> Bật chế độ kéo-thả bảng trên màn hình LIVE</label></div>
+    <p class="muted small">Toạ độ tính trên khung chuẩn 720×1280. Lưu ý vùng giao diện TikTok (bình luận phía dưới bên trái, nút bấm cột phải).</p>
+  </div>
+  <div class="grid3">
+    <div class="card"><h3>Bảng lời giảng (cho người khiếm thính)</h3>
+      <label class="chk"><input type="checkbox" data-k="layout.sermon.show"> Hiện</label>
+      <div class="grid2">
+        <label>X<input type="number" data-k="layout.sermon.x"></label><label>Y<input type="number" data-k="layout.sermon.y"></label>
+        <label>Rộng<input type="number" data-k="layout.sermon.w"></label><label>Cao<input type="number" data-k="layout.sermon.h"></label>
+        <label>Cỡ chữ<input type="number" data-k="layout.sermon.font"></label><label>Độ trong suốt nền (0 = trong suốt hẳn)<input type="range" min="0" max="1" step="0.01" data-k="layout.sermon.opacity"></label><label class="chk"><input type="checkbox" data-k="layout.sermon.blur"> Làm mờ phía sau bảng</label>
+      </div></div>
+    <div class="card"><h3>Bảng chào người mới</h3>
+      <label class="chk"><input type="checkbox" data-k="layout.welcome.show"> Hiện</label>
+      <div class="grid2">
+        <label>X<input type="number" data-k="layout.welcome.x"></label><label>Y<input type="number" data-k="layout.welcome.y"></label>
+        <label>Rộng<input type="number" data-k="layout.welcome.w"></label><label>Cao<input type="number" data-k="layout.welcome.h"></label>
+        <label>Cỡ chữ<input type="number" data-k="layout.welcome.font"></label><label>Độ trong suốt nền (0 = trong suốt hẳn)<input type="range" min="0" max="1" step="0.01" data-k="layout.welcome.opacity"></label><label class="chk"><input type="checkbox" data-k="layout.welcome.blur"> Làm mờ phía sau bảng</label>
+        <label>Số dòng tối đa<input type="number" data-k="layout.welcome.max"></label>
+      </div></div>
+    <div class="card"><h3>Dòng chữ dưới cùng</h3>
+      <label class="chk"><input type="checkbox" data-k="layout.title.show"> Hiện</label>
+      <label>Nội dung<input data-k="layout.title.text"></label>
+      <label>Vị trí Y<input type="number" data-k="layout.title.y"></label></div>
+  </div>
+  <div class="row"><button id="resetLayout">Khôi phục bố cục mặc định</button></div>
+</section>
+
+<!-- ============ UPDATE ============ -->
+<section id="tab-update" class="tab">
+  <div class="grid2">
+    <div class="card">
+      <h3>Cập nhật nóng qua GitHub</h3>
+      <label>Repo (owner/tên-repo)<input data-k="update.repo" placeholder="koddrawer/Chua---Live-----Updates"></label>
+      <label>Nhánh<input data-k="update.branch" placeholder="main"></label>
+      <label>Token (chỉ cần nếu repo riêng tư)<input type="password" data-k="update.token"></label>
+      <label class="chk"><input type="checkbox" data-k="update.auto"> Tự kiểm tra khi mở app (và mỗi 30 phút)</label>
+      <label class="chk"><input type="checkbox" data-k="update.autoApply"> Tự cài bản mới khi mở app</label>
+      <div class="row"><button id="btnCheck">Kiểm tra</button><button id="btnApply" class="primary">Cập nhật & khởi động lại</button><button id="btnRollback">Về bản gốc</button></div>
+      <p id="updMsg" class="muted"></p>
+    </div>
+    <div class="card">
+      <h3>Phiên bản</h3>
+      <p id="verInfo"></p>
+      <p class="muted small">Repo cần có thư mục <code>app/</code> (giống thư mục app trong bộ cài) với file <code>app/version.json</code>. Khi số version trên repo lớn hơn bản đang chạy, app tải về, giải nén và khởi động lại. Cấu hình, nhân vật, khung, nhạc bạn thêm được giữ nguyên.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- Modal: cắt sprite sheet -->
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head"><b id="mTitle">Thêm nhân vật</b><button id="mClose" class="mini">✕</button></div>
+    <div class="modal-body" id="mBody"></div>
+  </div>
+</div>
+<script src="slicer.js"></script>
+<script src="panel.js"></script>
+</body>
+</html>

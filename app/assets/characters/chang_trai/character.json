@@ -1,0 +1,123 @@
+{
+ "name": "Chàng trai",
+ "refHeight": 428,
+ "frames": {
+  "walk_side_0.png": {
+   "w": 260,
+   "h": 422,
+   "ax": 136.8,
+   "ay": 422
+  },
+  "walk_side_1.png": {
+   "w": 253,
+   "h": 422,
+   "ax": 127.5,
+   "ay": 422
+  },
+  "walk_side_2.png": {
+   "w": 268,
+   "h": 420,
+   "ax": 135.4,
+   "ay": 420
+  },
+  "walk_side_3.png": {
+   "w": 273,
+   "h": 419,
+   "ax": 140.4,
+   "ay": 419
+  },
+  "walk_front_4.png": {
+   "w": 176,
+   "h": 441,
+   "ax": 83.3,
+   "ay": 441
+  },
+  "walk_front_5.png": {
+   "w": 178,
+   "h": 442,
+   "ax": 78.6,
+   "ay": 442
+  },
+  "walk_back_0.png": {
+   "w": 183,
+   "h": 427,
+   "ax": 100.7,
+   "ay": 427
+  },
+  "walk_back_1.png": {
+   "w": 199,
+   "h": 429,
+   "ax": 92.6,
+   "ay": 429
+  },
+  "bow_2.png": {
+   "w": 170,
+   "h": 411,
+   "ax": 85.0,
+   "ay": 411
+  },
+  "kneel_3.png": {
+   "w": 254,
+   "h": 373,
+   "ax": 127.0,
+   "ay": 373
+  },
+  "prostrate_4.png": {
+   "w": 292,
+   "h": 221,
+   "ax": 146.0,
+   "ay": 221
+  }
+ },
+ "animations": {
+  "walk_left": {
+   "frames": [
+    "walk_side_0.png",
+    "walk_side_1.png",
+    "walk_side_2.png",
+    "walk_side_3.png"
+   ],
+   "fps": 6,
+   "flip": false
+  },
+  "walk_right": {
+   "frames": [
+    "walk_side_0.png",
+    "walk_side_1.png",
+    "walk_side_2.png",
+    "walk_side_3.png"
+   ],
+   "fps": 6,
+   "flip": true
+  },
+  "walk_up": {
+   "frames": [
+    "walk_back_0.png",
+    "walk_back_1.png"
+   ],
+   "fps": 3
+  },
+  "walk_down": {
+   "frames": [
+    "walk_front_4.png",
+    "walk_front_5.png"
+   ],
+   "fps": 3
+  },
+  "bow": {
+   "frames": [
+    "bow_2.png"
+   ]
+  },
+  "kneel": {
+   "frames": [
+    "kneel_3.png"
+   ]
+  },
+  "prostrate": {
+   "frames": [
+    "prostrate_4.png"
+   ]
+  }
+ }
+}

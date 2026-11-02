@@ -1,0 +1,123 @@
+{
+ "name": "Phụ nữ",
+ "refHeight": 432,
+ "frames": {
+  "walk_side_0.png": {
+   "w": 281,
+   "h": 450,
+   "ax": 141.6,
+   "ay": 450
+  },
+  "walk_side_1.png": {
+   "w": 259,
+   "h": 446,
+   "ax": 124.0,
+   "ay": 446
+  },
+  "walk_side_2.png": {
+   "w": 275,
+   "h": 447,
+   "ax": 134.0,
+   "ay": 447
+  },
+  "walk_side_3.png": {
+   "w": 284,
+   "h": 443,
+   "ax": 136.2,
+   "ay": 443
+  },
+  "walk_front_4.png": {
+   "w": 190,
+   "h": 463,
+   "ax": 86.0,
+   "ay": 463
+  },
+  "walk_front_5.png": {
+   "w": 193,
+   "h": 464,
+   "ax": 81.0,
+   "ay": 464
+  },
+  "walk_back_0.png": {
+   "w": 190,
+   "h": 432,
+   "ax": 104.1,
+   "ay": 432
+  },
+  "walk_back_1.png": {
+   "w": 193,
+   "h": 432,
+   "ax": 94.8,
+   "ay": 432
+  },
+  "bow_2.png": {
+   "w": 171,
+   "h": 419,
+   "ax": 85.5,
+   "ay": 419
+  },
+  "kneel_3.png": {
+   "w": 287,
+   "h": 396,
+   "ax": 143.5,
+   "ay": 396
+  },
+  "prostrate_4.png": {
+   "w": 300,
+   "h": 218,
+   "ax": 150.0,
+   "ay": 218
+  }
+ },
+ "animations": {
+  "walk_left": {
+   "frames": [
+    "walk_side_0.png",
+    "walk_side_1.png",
+    "walk_side_2.png",
+    "walk_side_3.png"
+   ],
+   "fps": 6,
+   "flip": false
+  },
+  "walk_right": {
+   "frames": [
+    "walk_side_0.png",
+    "walk_side_1.png",
+    "walk_side_2.png",
+    "walk_side_3.png"
+   ],
+   "fps": 6,
+   "flip": true
+  },
+  "walk_up": {
+   "frames": [
+    "walk_back_0.png",
+    "walk_back_1.png"
+   ],
+   "fps": 3
+  },
+  "walk_down": {
+   "frames": [
+    "walk_front_4.png",
+    "walk_front_5.png"
+   ],
+   "fps": 3
+  },
+  "bow": {
+   "frames": [
+    "bow_2.png"
+   ]
+  },
+  "kneel": {
+   "frames": [
+    "kneel_3.png"
+   ]
+  },
+  "prostrate": {
+   "frames": [
+    "prostrate_4.png"
+   ]
+  }
+ }
+}

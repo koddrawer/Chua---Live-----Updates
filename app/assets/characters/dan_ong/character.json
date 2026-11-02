@@ -1,0 +1,134 @@
+{
+ "name": "Đàn ông",
+ "refHeight": 431,
+ "frames": {
+  "walk_side_0.png": {
+   "w": 255,
+   "h": 423,
+   "ax": 130.5,
+   "ay": 423
+  },
+  "walk_side_1.png": {
+   "w": 242,
+   "h": 425,
+   "ax": 124.7,
+   "ay": 425
+  },
+  "walk_side_2.png": {
+   "w": 268,
+   "h": 422,
+   "ax": 133.7,
+   "ay": 422
+  },
+  "walk_side_3.png": {
+   "w": 273,
+   "h": 422,
+   "ax": 139.1,
+   "ay": 422
+  },
+  "walk_front_4.png": {
+   "w": 182,
+   "h": 444,
+   "ax": 88.1,
+   "ay": 444
+  },
+  "walk_front_5.png": {
+   "w": 184,
+   "h": 444,
+   "ax": 82.6,
+   "ay": 444
+  },
+  "walk_back_0.png": {
+   "w": 181,
+   "h": 432,
+   "ax": 94.0,
+   "ay": 432
+  },
+  "walk_back_1.png": {
+   "w": 195,
+   "h": 431,
+   "ax": 94.3,
+   "ay": 431
+  },
+  "bow_front_2.png": {
+   "w": 174,
+   "h": 425,
+   "ax": 87.0,
+   "ay": 425
+  },
+  "bow_3.png": {
+   "w": 177,
+   "h": 413,
+   "ax": 88.5,
+   "ay": 413
+  },
+  "kneel_4.png": {
+   "w": 270,
+   "h": 380,
+   "ax": 135.0,
+   "ay": 380
+  },
+  "prostrate_5.png": {
+   "w": 315,
+   "h": 227,
+   "ax": 157.5,
+   "ay": 227
+  }
+ },
+ "animations": {
+  "walk_left": {
+   "frames": [
+    "walk_side_0.png",
+    "walk_side_1.png",
+    "walk_side_2.png",
+    "walk_side_3.png"
+   ],
+   "fps": 6,
+   "flip": false
+  },
+  "walk_right": {
+   "frames": [
+    "walk_side_0.png",
+    "walk_side_1.png",
+    "walk_side_2.png",
+    "walk_side_3.png"
+   ],
+   "fps": 6,
+   "flip": true
+  },
+  "walk_up": {
+   "frames": [
+    "walk_back_0.png",
+    "walk_back_1.png"
+   ],
+   "fps": 3
+  },
+  "walk_down": {
+   "frames": [
+    "walk_front_4.png",
+    "walk_front_5.png"
+   ],
+   "fps": 3
+  },
+  "bow": {
+   "frames": [
+    "bow_3.png"
+   ]
+  },
+  "kneel": {
+   "frames": [
+    "kneel_4.png"
+   ]
+  },
+  "prostrate": {
+   "frames": [
+    "prostrate_5.png"
+   ]
+  },
+  "bow_front": {
+   "frames": [
+    "bow_front_2.png"
+   ]
+  }
+ }
+}

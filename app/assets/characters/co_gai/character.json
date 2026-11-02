@@ -1,0 +1,123 @@
+{
+ "name": "Cô gái",
+ "refHeight": 490,
+ "frames": {
+  "walk_side_0.png": {
+   "w": 257,
+   "h": 492,
+   "ax": 146.3,
+   "ay": 492
+  },
+  "walk_side_1.png": {
+   "w": 236,
+   "h": 493,
+   "ax": 115.4,
+   "ay": 493
+  },
+  "walk_side_2.png": {
+   "w": 222,
+   "h": 493,
+   "ax": 115.4,
+   "ay": 493
+  },
+  "walk_side_3.png": {
+   "w": 269,
+   "h": 493,
+   "ax": 122.4,
+   "ay": 493
+  },
+  "walk_front_4.png": {
+   "w": 180,
+   "h": 498,
+   "ax": 86.3,
+   "ay": 498
+  },
+  "walk_front_5.png": {
+   "w": 183,
+   "h": 499,
+   "ax": 75.4,
+   "ay": 499
+  },
+  "walk_back_0.png": {
+   "w": 173,
+   "h": 490,
+   "ax": 95.1,
+   "ay": 490
+  },
+  "walk_back_1.png": {
+   "w": 166,
+   "h": 490,
+   "ax": 75.8,
+   "ay": 490
+  },
+  "bow_2.png": {
+   "w": 160,
+   "h": 461,
+   "ax": 80.0,
+   "ay": 461
+  },
+  "kneel_3.png": {
+   "w": 254,
+   "h": 401,
+   "ax": 127.0,
+   "ay": 401
+  },
+  "prostrate_4.png": {
+   "w": 277,
+   "h": 247,
+   "ax": 138.5,
+   "ay": 247
+  }
+ },
+ "animations": {
+  "walk_left": {
+   "frames": [
+    "walk_side_0.png",
+    "walk_side_1.png",
+    "walk_side_2.png",
+    "walk_side_3.png"
+   ],
+   "fps": 6,
+   "flip": false
+  },
+  "walk_right": {
+   "frames": [
+    "walk_side_0.png",
+    "walk_side_1.png",
+    "walk_side_2.png",
+    "walk_side_3.png"
+   ],
+   "fps": 6,
+   "flip": true
+  },
+  "walk_up": {
+   "frames": [
+    "walk_back_0.png",
+    "walk_back_1.png"
+   ],
+   "fps": 3
+  },
+  "walk_down": {
+   "frames": [
+    "walk_front_4.png",
+    "walk_front_5.png"
+   ],
+   "fps": 3
+  },
+  "bow": {
+   "frames": [
+    "bow_2.png"
+   ]
+  },
+  "kneel": {
+   "frames": [
+    "kneel_3.png"
+   ]
+  },
+  "prostrate": {
+   "frames": [
+    "prostrate_4.png"
+   ]
+  }
+ }
+}

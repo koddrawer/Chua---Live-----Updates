@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Chùa Live — Màn hình LIVE 9:16</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file: data: blob:; img-src 'self' file: data: blob: https:; media-src 'self' file: data: blob:; style-src 'self' 'unsafe-inline' file:; font-src 'self' file: data:; script-src 'self' file:">
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<link rel="stylesheet" href="stage.css">
+</head>
+<body>
+<canvas id="scene"></canvas>
+<video id="bg" src="../assets/video/bg.mp4" muted loop playsinline autoplay preload="auto"></video>
+<div id="ui">
+  <div id="sermon" class="board">
+    <div class="board-title"><span class="lotus">🪷</span><span id="sermonTitle">Lời Phật dạy</span></div>
+    <div id="sermonLines" class="sermon-lines"></div>
+  </div>
+  <div id="welcome" class="board">
+    <div class="board-title"><span class="lotus">🙏</span><span>Chào mừng về chùa</span></div>
+    <div id="welcomeList" class="welcome-list"></div>
+  </div>
+  <div id="titleBar"></div>
+  <div id="cardLayer"></div>
+  <div id="editHint">CHẾ ĐỘ CHỈNH BỐ CỤC — kéo bảng để di chuyển, kéo góc phải dưới để đổi kích thước, lăn chuột để đổi cỡ chữ</div>
+</div>
+<script src="audio.js"></script>
+<script src="stage.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+[
+  { "name": "Bình An", "verse": ["Sen hồng nở giữa ao thu", "Tâm an cảnh lặng, phúc dù đầy sân"], "meaning": "Gia đạo bình an, mọi việc êm ấm" },
+  { "name": "Tài Lộc", "verse": ["Xuân sang lộc biếc đầy cành", "Làm ăn thuận lợi, phúc lành đến nhà"], "meaning": "Tài lộc dồi dào, buôn bán hanh thông" },
+  { "name": "An Khang", "verse": ["Trăng rằm soi sáng mái hiên", "Thân tâm khỏe mạnh, gia tiên độ trì"], "meaning": "Sức khỏe dồi dào, thân tâm an khang" },
+  { "name": "Vạn Sự Như Ý", "verse": ["Gió lành thổi cánh buồm xa", "Cầu gì được nấy, ước là thành công"], "meaning": "Vạn sự như ý, cầu được ước thấy" },
+  { "name": "Gia Đạo Hưng Long", "verse": ["Cây cao bóng mát sum vầy", "Cháu con hiếu thảo, sum vầy yêu thương"], "meaning": "Gia đình hòa thuận, con cháu hiếu thảo" },
+  { "name": "Công Danh", "verse": ["Bước chân vững chãi đường xa", "Công danh rạng rỡ, nở hoa trên cành"], "meaning": "Công danh thăng tiến, sự nghiệp vững vàng" },
+  { "name": "Phúc Lộc Song Toàn", "verse": ["Mây vàng che chở trời cao", "Phúc kia lộc nọ dạt dào bốn phương"], "meaning": "Phúc lộc song toàn, quý nhân phù trợ" },
+  { "name": "Hỷ Lạc", "verse": ["Chuông chùa vọng tiếng sớm mai", "Lòng vui nhẹ bước, chẳng ai muộn phiền"], "meaning": "Tâm hồn hoan hỷ, buồn phiền tan biến" },
+  { "name": "Tình Duyên", "verse": ["Đôi chim chung một cành mai", "Duyên lành đã đến, tháng ngày bên nhau"], "meaning": "Tình duyên viên mãn, gặp người tri kỷ" },
+  { "name": "Quý Nhân", "verse": ["Đường xa có bạn cùng đi", "Gặp người giúp đỡ, khó gì cũng qua"], "meaning": "Gặp quý nhân phù trợ, khó khăn hóa giải" },
+  { "name": "Thuận Buồm Xuôi Gió", "verse": ["Sông dài nước lặng thuyền trôi", "Việc nào cũng thuận, đến nơi đến chốn"], "meaning": "Mọi việc thuận buồm xuôi gió" },
+  { "name": "Trí Tuệ", "verse": ["Đèn thiền thắp sáng canh khuya", "Trí khai tuệ mở, lối về sáng trong"], "meaning": "Trí tuệ sáng suốt, học hành tấn tới" },
+  { "name": "Tai Qua Nạn Khỏi", "verse": ["Mưa tan nắng ấm trở về", "Tai ương tiêu hết, bốn bề bình yên"], "meaning": "Tai qua nạn khỏi, xui rủi tiêu tan" },
+  { "name": "Trường Thọ", "verse": ["Tùng xanh đứng giữa trời đông", "Mẹ cha mạnh khỏe, sống cùng cháu con"], "meaning": "Ông bà cha mẹ sống lâu, mạnh khỏe" },
+  { "name": "Thịnh Vượng", "verse": ["Ruộng vàng lúa chín thơm hương", "Mùa màng bội thu, ngập đường ấm no"], "meaning": "Làm ăn thịnh vượng, của cải sung túc" },
+  { "name": "Thanh Tịnh", "verse": ["Hoa sen chẳng nhiễm bùn nhơ", "Tâm trong như ngọc, đợi chờ chi đâu"], "meaning": "Tâm thanh tịnh, phiền não không vướng bận" },
+  { "name": "Đại Phúc", "verse": ["Mười phương chư Phật chứng minh", "Công đức tròn đủ, an bình muôn năm"], "meaning": "Phúc đức lớn lao, Phật trời gia hộ" },
+  { "name": "Hanh Thông", "verse": ["Cửa son rộng mở đón xuân", "Đường đi thênh thang, mười phần hanh thông"], "meaning": "Công việc hanh thông, cửa nào cũng mở" },
+  { "name": "Viên Mãn", "verse": ["Trăng tròn soi bóng mặt hồ", "Ước mơ thành tựu, cơ đồ vững tay"], "meaning": "Ước nguyện viên mãn, mọi điều tròn đầy" },
+  { "name": "Cát Tường", "verse": ["Mây lành tụ hội đầu non", "Điềm lành đến cửa, vuông tròn trước sau"], "meaning": "Điềm lành cát tường, mọi sự tốt đẹp" }
+]

@@ -1,0 +1,185 @@
+{
+  "tiktok": {
+    "username": "",
+    "signApiKey": "",
+    "autoConnect": false,
+    "retrySeconds": 15
+  },
+  "window": {
+    "openStageOnStart": true,
+    "stageOnTop": false,
+    "stageFrame": true,
+    "stage": {},
+    "panel": {}
+  },
+  "update": {
+    "repo": "koddrawer/Chua---Live-----Updates",
+    "branch": "main",
+    "token": "",
+    "auto": true,
+    "autoApply": true
+  },
+  "scene": {
+    "nameSeconds": 30,
+    "climbSeconds": 45,
+    "stepsPerBow": 3,
+    "stepSeconds": 0.55,
+    "bowSeconds": 1.3,
+    "charScale": 1.0,
+    "maxCharacters": 45,
+    "spawnInterval": 0.8,
+    "idleCount": 6,
+    "idleSpawnSeconds": 3.5,
+    "idleWhenViewers": 2,
+    "hideWithName": false,
+    "sideWalkChance": 0.18,
+    "nameFontSize": 15,
+    "showNames": true,
+    "blessingSeconds": 3.5,
+    "zoomScale": 2.4,
+    "zoomHold": 1.0,
+    "zoomEase": 0.55,
+    "auraIntensity": 1.0,
+    "kneelRounds": 3,
+    "cardSeconds": 8,
+    "joinOnChat": true,
+    "joinOnLike": true,
+    "rejoinCooldown": 60,
+    "videoRate": 1.0
+  },
+  "characters": {
+    "disabled": [],
+    "weights": {}
+  },
+  "tiers": [
+    {
+      "min": 1,
+      "label": "Tín chủ",
+      "frame": "bundled:frame_1.png",
+      "fortuneLevel": "Cát",
+      "kneelRounds": 2,
+      "color": "#ffd88a",
+      "cardSeconds": 0
+    },
+    {
+      "min": 10,
+      "label": "Thiện nam tín nữ",
+      "frame": "bundled:frame_2.png",
+      "fortuneLevel": "Đại Cát",
+      "kneelRounds": 3,
+      "color": "#ffc861",
+      "cardSeconds": 0
+    },
+    {
+      "min": 100,
+      "label": "Đại thí chủ",
+      "frame": "bundled:frame_3.png",
+      "fortuneLevel": "Thượng Cát",
+      "kneelRounds": 3,
+      "color": "#ffe9b0",
+      "cardSeconds": 0
+    },
+    {
+      "min": 500,
+      "label": "Bồ Tát hộ pháp",
+      "frame": "bundled:frame_4.png",
+      "fortuneLevel": "Thượng Thượng Cát",
+      "kneelRounds": 4,
+      "color": "#fff3cf",
+      "cardSeconds": 0
+    }
+  ],
+  "voice": {
+    "engine": "edge",
+    "voice": "vi-VN-NamMinhNeural",
+    "thanksVoice": "vi-VN-HoaiMyNeural",
+    "rate": -8,
+    "pitch": -2,
+    "thanksRate": 0,
+    "sermonVolume": 1.0,
+    "thanksVolume": 1.0,
+    "sermonEnabled": true,
+    "sermonGap": 1.2,
+    "sectionGap": 4,
+    "shuffleSections": false,
+    "thanksTemplate": "A Di Đà Phật. Xin cảm ơn {name} đã cúng dường {gift}. Chúc mừng {name} rút được quẻ {fortuneName}, {level}. {verse}. Ý nghĩa: {fortune}. Nguyện cầu Tam Bảo gia hộ cho {name} thân tâm an lạc, vạn sự cát tường.",
+    "greetEnabled": false,
+    "greetTemplate": "A Di Đà Phật, chào mừng {name} đã đến chùa.",
+    "resumeDelay": 1.0,
+    "fallbackGoogle": true
+  },
+  "music": {
+    "enabled": true,
+    "volume": 0.35,
+    "duckVolume": 0.15,
+    "playlist": [
+      "bundled:nhac_thien.ogg"
+    ],
+    "shuffle": false
+  },
+  "sfx": {
+    "bell": true,
+    "chime": true,
+    "volume": 0.6
+  },
+  "layout": {
+    "sermon": {
+      "x": 14,
+      "y": 386,
+      "w": 300,
+      "h": 300,
+      "font": 19,
+      "opacity": 0.62,
+      "show": true,
+      "blur": true
+    },
+    "welcome": {
+      "x": 470,
+      "y": 22,
+      "w": 236,
+      "h": 206,
+      "font": 16,
+      "opacity": 0.55,
+      "show": true,
+      "max": 6,
+      "blur": true
+    },
+    "card": {
+      "x": 360,
+      "y": 250,
+      "size": 360,
+      "delay": 0,
+      "showName": true,
+      "nameSize": 40,
+      "showTier": true,
+      "tierText": "✦ {tier} ✦",
+      "showGift": true,
+      "giftText": "Cúng dường {gift} · {coins} xu",
+      "headText": "",
+      "showRays": true
+    },
+    "title": {
+      "show": true,
+      "text": "Lên chùa lễ Phật · Thả tim để được chúc phúc",
+      "y": 1232
+    },
+    "fortune": {
+      "show": true,
+      "x": 360,
+      "y": 725,
+      "w": 540,
+      "scale": 1.0,
+      "opacity": 0.92,
+      "titleText": "Quẻ {fortuneName}",
+      "showLevel": true,
+      "showVerse": true,
+      "showMeaning": true
+    }
+  },
+  "content": {
+    "custom": false,
+    "sermons": null,
+    "fortunes": null,
+    "blessings": null
+  }
+}

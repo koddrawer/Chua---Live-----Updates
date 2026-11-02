@@ -1,0 +1,38 @@
+[
+ {
+  "file": "frame_1.png",
+  "name": "Sen vàng thác nước",
+  "w": 578,
+  "h": 501,
+  "cx": 0.4931,
+  "cy": 0.513,
+  "r": 0.2664
+ },
+ {
+  "file": "frame_2.png",
+  "name": "Phật quang đèn lồng",
+  "w": 562,
+  "h": 502,
+  "cx": 0.4875,
+  "cy": 0.5239,
+  "r": 0.2722
+ },
+ {
+  "file": "frame_3.png",
+  "name": "Pháp luân sóng biển",
+  "w": 635,
+  "h": 519,
+  "cx": 0.4953,
+  "cy": 0.4894,
+  "r": 0.2535
+ },
+ {
+  "file": "frame_4.png",
+  "name": "Thiên cung hào quang",
+  "w": 1254,
+  "h": 1254,
+  "cx": 0.4984,
+  "cy": 0.4936,
+  "r": 0.2751
+ }
+]
