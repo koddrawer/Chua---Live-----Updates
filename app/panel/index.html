@@ -137,6 +137,15 @@
     <div class="row"><button id="btnAddVideo">+ Thêm video nền</button><button id="btnNextBg">Đổi video ngay</button></div>
     <p class="muted small">Video nên cùng bố cục bậc thang như video mẫu (720×1280) để nhân vật đi đúng bậc.</p>
   </div>
+  <div class="card"><h3>Tự động zoom vào người đang đi <span class="muted small">— ưu tiên người xem LIVE thật, tạm dừng khi có donate</span></h3>
+    <div class="grid3">
+      <label class="chk"><input type="checkbox" data-k="scene.autoZoom"> Bật tự động zoom</label>
+      <label>Nghỉ giữa 2 lần zoom (giây)<input type="number" step="0.5" min="1" data-k="scene.autoZoomInterval"></label>
+      <label>Giữ zoom (giây)<input type="number" step="0.5" min="0" data-k="scene.autoZoomHold"></label>
+      <label>Mức zoom (×)<input type="number" step="0.1" min="1.1" data-k="scene.autoZoomScale"></label>
+      <label>Thời gian zoom vào / ra (giây — càng lớn càng chậm)<input type="number" step="0.1" min="0.3" data-k="scene.autoZoomEase"></label>
+    </div>
+  </div>
   <div class="card"><h3>Biến mất ở cửa chùa</h3>
     <label>Vị trí biến mất (toạ độ Y, nhỏ hơn = đi lên cao hơn; cửa chùa ≈ 650, mặc định 690)<input type="number" data-k="scene.vanishY"></label>
   </div>

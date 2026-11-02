@@ -401,30 +401,49 @@ function drawCloudCover() {
 }
 
 // ---------------- Camera ----------------
-const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-function camFocus(c) {
+const easeSine = t => -(Math.cos(Math.PI * t) - 1) / 2; // mượt, không giật
+const camClamp = (z, x, y) => { const hw = W / 2 / z, hh = H / 2 / z; return [Math.max(hw, Math.min(W - hw, x)), Math.max(hh, Math.min(H - hh, y))]; };
+// opts: { Z, ease (giây zoom vào/ra), hold (giây giữ), auto }
+function camFocus(c, opts = {}) {
   return new Promise(res => {
-    const s = cfg.scene, Z = Math.max(1, s.zoomScale);
-    const h = charHeightAt(c.y);
-    let tx = charX(c), ty = c.y - h * 0.45;
-    const clamp = (z, x, y) => { const hw = W / 2 / z, hh = H / 2 / z; return [Math.max(hw, Math.min(W - hw, x)), Math.max(hh, Math.min(H - hh, y))]; };
-    cam.anim = { t: 0, e: s.zoomEase, hold: s.zoomHold, Z, tx, ty, clamp, res, c };
+    const s = cfg.scene;
+    const Z = Math.max(1, opts.Z ?? s.zoomScale);
+    if (cam.anim && cam.anim.res) { const r = cam.anim.res; cam.anim.res = null; r(); } // nhường cho lượt zoom mới
+    // bắt đầu từ trạng thái camera hiện tại -> không bị giật khi chuyển giữa 2 lượt zoom
+    cam.anim = { t: 0, e: Math.max(0.2, opts.ease ?? s.zoomEase), hold: opts.hold ?? s.zoomHold, Z, c, res, auto: !!opts.auto, z0: cam.z, x0: cam.x, y0: cam.y };
   });
 }
 function updateCam(dt) {
   const a = cam.anim; if (!a) { cam.x = W / 2; cam.y = H / 2; cam.z = 1; return; }
   a.t += dt;
-  // bám theo nhân vật nếu nó di chuyển
-  if (a.c && !a.c.dead) { const h = charHeightAt(a.c.y); a.tx = charX(a.c); a.ty = a.c.y - h * 0.45; }
-  let k;
-  if (a.t < a.e) k = ease(a.t / a.e);
-  else if (a.t < a.e + a.hold) k = 1;
-  else if (a.t < a.e * 2 + a.hold) k = 1 - ease((a.t - a.e - a.hold) / a.e);
-  else { cam.anim = null; cam.x = W / 2; cam.y = H / 2; cam.z = 1; a.res(); return; }
-  const z = 1 + (a.Z - 1) * k;
-  const [cxT, cyT] = a.clamp(z, a.tx, a.ty);
-  cam.z = z; cam.x = W / 2 + (cxT - W / 2) * Math.min(1, k * 1.2); cam.y = H / 2 + (cyT - H / 2) * Math.min(1, k * 1.2);
-  const [x2, y2] = a.clamp(z, cam.x, cam.y); cam.x = x2; cam.y = y2;
+  if (a.c && !a.c.dead) { const h = charHeightAt(a.c.y); a.tx = charX(a.c); a.ty = a.c.y - h * 0.5; }
+  if (a.tx == null) { a.tx = W / 2; a.ty = H / 2; }
+  // mục tiêu được làm mượt để camera bám theo nhân vật nhẹ nhàng
+  a.sx = a.sx == null ? a.tx : a.sx + (a.tx - a.sx) * Math.min(1, dt * 3);
+  a.sy = a.sy == null ? a.ty : a.sy + (a.ty - a.sy) * Math.min(1, dt * 3);
+  const [txC, tyC] = camClamp(a.Z, a.sx, a.sy);
+  let z, x, y;
+  if (a.t < a.e) { const k = easeSine(a.t / a.e); z = a.z0 + (a.Z - a.z0) * k; x = a.x0 + (txC - a.x0) * k; y = a.y0 + (tyC - a.y0) * k; }
+  else if (a.t < a.e + a.hold) { z = a.Z; x = txC; y = tyC; }
+  else if (a.t < a.e * 2 + a.hold) { const k = easeSine((a.t - a.e - a.hold) / a.e); z = a.Z + (1 - a.Z) * k; x = txC + (W / 2 - txC) * k; y = tyC + (H / 2 - tyC) * k; }
+  else { cam.anim = null; cam.x = W / 2; cam.y = H / 2; cam.z = 1; a.res && a.res(); lastAutoZoomEnd = now; return; }
+  cam.z = z; const [cx, cy] = camClamp(z, x, y); cam.x = cx; cam.y = cy;
+}
+// Tự động zoom ngẫu nhiên vào người đang đi (ưu tiên người xem thật)
+let lastAutoZoomEnd = 0, lastAutoTarget = null;
+function autoZoomTick() {
+  const s = cfg.scene;
+  if (!s.autoZoom || cam.anim || donorBusy || previewHold || editMode) return;
+  if (now - lastAutoZoomEnd < (s.autoZoomInterval ?? 5)) return;
+  const ok = c => !c.removing && !c.dead && c.alpha > 0.9 && c.y > DOOR_Y + 90 && c.y < START_Y && (c.mode === 'walk' || c.mode === 'action') && !c.auraOn;
+  let pool = chars.filter(c => ok(c) && c.user && c !== lastAutoTarget);
+  if (!pool.length) pool = chars.filter(c => ok(c) && c !== lastAutoTarget);
+  if (!pool.length) { lastAutoZoomEnd = now - (s.autoZoomInterval ?? 5) + 1; return; }
+  // ưu tiên người vào live gần đây nhất
+  pool.sort((a, b) => (b.user ? 1 : 0) - (a.user ? 1 : 0) || b.born - a.born);
+  const c = pool[Math.floor(Math.random() * Math.min(3, pool.length))];
+  lastAutoTarget = c;
+  camFocus(c, { Z: s.autoZoomScale ?? 1.7, ease: s.autoZoomEase ?? 1.6, hold: s.autoZoomHold ?? 2, auto: true });
 }
 
 // ---------------- Vòng lặp ----------------
@@ -463,6 +482,7 @@ function tick(dt) {
   const idleTarget = viewers > 0 || joinQueue.length ? s.idleWhenViewers : s.idleCount;
   const idleNow = chars.filter(c => c.kind === 'idle' && !c.removing).length;
   if (idleNow < idleTarget && now - lastIdle >= s.idleSpawnSeconds * (0.7 + Math.random() * 0.6)) { spawn({ kind: 'idle' }); lastIdle = now; }
+  autoZoomTick();
   for (const c of chars) updateChar(c, dt);
   for (const c of chars) if (c.dead && c.user && byUser.get(c.user.id) === c) byUser.delete(c.user.id);
   chars = chars.filter(c => !c.dead);

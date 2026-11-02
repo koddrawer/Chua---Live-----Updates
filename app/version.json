@@ -1,4 +1,4 @@
 {
-  "version": "1.0.12",
-  "notes": "Thêm 2 video nền (Quan Âm, La Hán), đổi ngẫu nhiên với chuyển cảnh mờ dần; nhân vật mờ dần và biến mất ở cửa chùa (chỉnh được vị trí); lời giảng nhỏ dần trước khi đọc cảm ơn"
+  "version": "1.0.13",
+  "notes": "Tự động zoom chậm vào người đang đi mỗi 5 giây (ưu tiên người xem thật), giữ 2 giây; camera chuyển mượt giữa các lượt zoom"
 }

@@ -47,7 +47,12 @@
     "joinOnLike": true,
     "rejoinCooldown": 20,
     "videoRate": 1.0,
-    "vanishY": 690
+    "vanishY": 690,
+    "autoZoom": true,
+    "autoZoomInterval": 5,
+    "autoZoomScale": 1.7,
+    "autoZoomEase": 1.6,
+    "autoZoomHold": 2
   },
   "characters": {
     "disabled": [],
