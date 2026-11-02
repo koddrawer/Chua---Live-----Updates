@@ -345,15 +345,26 @@ function ghHeaders(raw) {
   if (raw) h.Accept = 'application/vnd.github.raw';
   return h;
 }
+// Lấy mã commit mới nhất để né bộ đệm 5 phút của raw.githubusercontent.com
+async function latestSha() {
+  const { repo, branch } = config.update;
+  try {
+    const r = await net.fetch(`https://api.github.com/repos/${repo}/commits/${encodeURIComponent(branch || 'main')}`, { headers: { ...ghHeaders(false), Accept: 'application/vnd.github.sha' } });
+    if (r.ok) { const s = (await r.text()).trim(); if (/^[0-9a-f]{40}$/.test(s)) return s; }
+  } catch {}
+  return null;
+}
 async function remoteVersion() {
   const { repo, branch } = config.update;
   if (!repo || !/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('Repo chưa đúng dạng owner/ten-repo');
+  const sha = await latestSha();
+  const ref = sha || (branch || 'main');
   let url, headers;
-  if (config.update.token) { url = `https://api.github.com/repos/${repo}/contents/app/version.json?ref=${encodeURIComponent(branch || 'main')}`; headers = ghHeaders(true); }
-  else { url = `https://raw.githubusercontent.com/${repo}/${branch || 'main'}/app/version.json?t=${Date.now()}`; headers = ghHeaders(false); }
+  if (config.update.token) { url = `https://api.github.com/repos/${repo}/contents/app/version.json?ref=${encodeURIComponent(ref)}`; headers = ghHeaders(true); }
+  else { url = `https://raw.githubusercontent.com/${repo}/${ref}/app/version.json?t=${Date.now()}`; headers = ghHeaders(false); }
   const r = await net.fetch(url, { headers });
   if (!r.ok) throw new Error('Không đọc được app/version.json trên repo (HTTP ' + r.status + ')');
-  return JSON.parse(await r.text());
+  const j = JSON.parse(await r.text()); j._sha = sha; return j;
 }
 async function checkUpdate() {
   const rv = await remoteVersion();
@@ -366,7 +377,7 @@ async function applyUpdate() {
   if (C.cmpVer(rv.version, C.appVer) <= 0) return { ok: false, msg: 'Đang dùng bản mới nhất (' + C.appVer + ')' };
   const { repo, branch } = config.update;
   toPanel('update-progress', { msg: 'Đang tải bản ' + rv.version + ' ...' });
-  const url = config.update.token ? `https://api.github.com/repos/${repo}/zipball/${encodeURIComponent(branch || 'main')}` : `https://codeload.github.com/${repo}/zip/refs/heads/${branch || 'main'}`;
+  const url = config.update.token ? `https://api.github.com/repos/${repo}/zipball/${encodeURIComponent(rv._sha || branch || 'main')}` : (rv._sha ? `https://codeload.github.com/${repo}/zip/${rv._sha}` : `https://codeload.github.com/${repo}/zip/refs/heads/${branch || 'main'}`);
   const r = await net.fetch(url, { headers: ghHeaders(false) });
   if (!r.ok) throw new Error('Tải zip thất bại (HTTP ' + r.status + ')');
   const buf = Buffer.from(await r.arrayBuffer());
