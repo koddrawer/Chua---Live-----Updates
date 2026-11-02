@@ -79,3 +79,22 @@ body.edit #cardLayer .dc-frame, body.edit #cardLayer .dfortune { pointer-events:
 .gitem .gname { margin-top: -2px; font-weight: 700; color: #fff2cf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; text-shadow: 0 0 6px rgba(255,170,60,.9), 0 1px 2px #000, 0 0 2px #000; }
 .gitem.gone { opacity: 0; filter: blur(8px) brightness(2.2); transform: scale(1.35) !important; transition: opacity 1.2s, filter 1.2s, transform 1.2s; }
 @keyframes gbob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+
+/* bình luận trực tiếp */
+#chat .chat-list { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; height: calc(100% - 38px); overflow: hidden; }
+.crow { line-height: 1.3; animation: wIn .45s ease-out; text-shadow: 0 1px 2px #000, 0 0 3px #000; word-break: break-word; }
+.crow .cn { color: #ffd987; font-weight: 700; }
+.crow .ct { color: #fff6e6; }
+.crow.reply .cn { color: #9fe6ff; } .crow.reply .ct { color: #e6fbff; font-style: italic; }
+.crow.gift .cn { color: #ffb36b; }
+/* thanh LIVE */
+#liveinfo { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 5px 14px; border-radius: 20px; background: rgba(20,8,0,.55); border: 1px solid rgba(255,214,130,.45); color: #fff3d6; font-family: 'Noto Serif', serif; text-shadow: 0 1px 2px #000; }
+#liveinfo .sep { margin: 0 8px; color: #ffcf7a; }
+#liveinfo .lv-dot { display: inline-block; width: .6em; height: .6em; border-radius: 50%; background: #ff3b3b; margin-right: 6px; box-shadow: 0 0 8px #ff3b3b; animation: lvblink 1.2s infinite; }
+@keyframes lvblink { 50% { opacity: .3; } }
+/* webcam người dẫn */
+#camwrap { position: absolute; border-radius: 50%; overflow: hidden; border: 3px solid #f3c55f; box-shadow: 0 0 22px rgba(255,190,80,.8); background: #000; }
+#camwrap.rect { border-radius: 16px; }
+#camwrap video { width: 100%; height: 100%; object-fit: cover; }
+#camwrap .cam-label { position: absolute; left: 0; right: 0; bottom: 6%; text-align: center; font: 700 15px 'Noto Serif', serif; color: #ffe7a8; text-shadow: 0 1px 3px #000; }
+body.edit #chat, body.edit #camwrap { pointer-events: auto; cursor: move; outline: 2px dashed #49f; }

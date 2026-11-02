@@ -309,6 +309,42 @@ $('#btnNextBg').onclick = () => window.api.stageCmd({ type: 'bg-next' });
 
 $('#btnGalleryClear').onclick = () => window.api.stageCmd({ type: 'gallery-clear' });
 
+// ---------- Tương tác LIVE ----------
+$('#btnTestChat').onclick = () => { const t = $('#testChat').value.trim(); if (!t) return; window.api.simulate({ type: 'chat', user: fakeUser($('#simName') && $('#simName').value.trim()), text: t }); };
+async function scanCams() {
+  const sel = $('#camSel');
+  try { const s = await navigator.mediaDevices.getUserMedia({ video: true }); s.getTracks().forEach(t => t.stop()); } catch (e) { addLog({ msg: 'Không truy cập được webcam: ' + e.message, level: 'warn' }); }
+  const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+  sel.innerHTML = '<option value="">Webcam mặc định</option>' + devs.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || 'Webcam ' + (i + 1))}</option>`).join('');
+  sel.value = (cfg.camera && cfg.camera.deviceId) || '';
+}
+$('#btnCamScan').onclick = scanCams;
+$('#camSel').onchange = e => window.api.setConfig('camera.deviceId', e.target.value);
+const R = (a, b) => a + Math.random() * (b - a), RI = (a, b) => Math.round(R(a, b)), pick = a => a[Math.floor(Math.random() * a.length)];
+$('#btnRandomize').onclick = async () => {
+  if (!confirm('Ngẫu nhiên hoá giao diện cho nick này? (nền, nhân vật, giọng, nhạc, tốc độ, hiệu ứng, dòng chữ)')) return;
+  const weights = {}; (D.characters || []).forEach(c => weights[c.id] = Math.round(R(0.4, 2) * 10) / 10);
+  const vids = (D.videos || []).map(v => v.id); let dis = [];
+  if (vids.length > 2 && Math.random() < 0.5) dis = [pick(vids)];
+  const male = Math.random() < 0.5;
+  const titles = ['Lên chùa lễ Phật · Thả tim để được chúc phúc', 'Nam Mô A Di Đà Phật · Bình luận để được chúc phúc', 'Thành tâm lễ Phật · Bình an cả nhà', 'Chùa trên mây · Gõ "cầu an" để nhận lời chúc', 'Tâm an vạn sự an · Thả tim cầu bình an', 'Lễ Phật cầu an · Bình luận tên để lên chùa'];
+  const heads = ['', 'Cảm tạ thí chủ', 'Công đức vô lượng', 'Phước lành viên mãn', 'A Di Đà Phật'];
+  const patch = {
+    backgrounds: { switchSeconds: RI(20, 60), fadeSeconds: Math.round(R(1.5, 3) * 10) / 10, random: true, disabled: dis },
+    characters: { weights },
+    voice: { voice: male ? 'vi-VN-NamMinhNeural' : 'vi-VN-HoaiMyNeural', thanksVoice: male ? 'vi-VN-HoaiMyNeural' : 'vi-VN-NamMinhNeural', rate: RI(-12, -2), pitch: RI(-4, 2), shuffleSections: true, sermonGap: Math.round(R(0.8, 2) * 10) / 10 },
+    music: { shuffle: true, volume: Math.round(R(0.25, 0.45) * 100) / 100 },
+    scene: { climbSeconds: RI(38, 58), idleCount: RI(4, 8), idleWhenViewers: RI(1, 3), autoZoomInterval: RI(4, 8), autoZoomScale: Math.round(R(1.5, 1.9) * 10) / 10, charScale: Math.round(R(0.92, 1.08) * 100) / 100, nameFontSize: RI(14, 17) },
+    effects: { motes: RI(70, 170), intensity: Math.round(R(0.8, 1.25) * 100) / 100 },
+    gallery: { baseSize: RI(64, 80) },
+    layout: { title: { text: pick(titles) }, card: { headText: pick(heads) }, sermon: { opacity: Math.round(R(0.35, 0.7) * 100) / 100 }, welcome: { opacity: Math.round(R(0.35, 0.7) * 100) / 100 } },
+  };
+  await window.api.patchConfig(patch);
+  $('#profMsg').textContent = 'Đã ngẫu nhiên hoá: giọng ' + (male ? 'nam' : 'nữ') + ' giảng, đổi nền mỗi ' + patch.backgrounds.switchSeconds + ' giây, dòng chữ "' + patch.layout.title.text + '".';
+};
+$('#btnExport').onclick = async () => { const r = await window.api.exportConfig(); if (r) $('#profMsg').textContent = 'Đã lưu: ' + r; };
+$('#btnImport').onclick = async () => { try { const r = await window.api.importConfig(); if (r) $('#profMsg').textContent = 'Đã nạp cấu hình.'; } catch (e) { $('#profMsg').textContent = 'Lỗi: ' + e.message; } };
+
 // ---------- Âm thanh ----------
 $('#btnVoiceTest').onclick = async () => {
   const m = $('#voiceTestMsg'); m.textContent = 'Đang kiểm tra…'; m.className = 'small';

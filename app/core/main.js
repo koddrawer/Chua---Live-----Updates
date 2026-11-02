@@ -221,7 +221,7 @@ async function tiktokConnect(username, opts = {}) {
   on(E.FOLLOW || 'follow', d => emitLive({ type: 'follow', user: normUser(d.user) }));
   on(E.SHARE || 'share', d => emitLive({ type: 'share', user: normUser(d.user) }));
   on(E.LIKE || 'like', d => emitLive({ type: 'like', user: normUser(d.user), count: d.likeCount || d.count || 1, total: d.totalLikeCount || Number(d.total) || 0 }));
-  on(E.ROOM_USER || 'roomUser', d => { tk.viewers = d.viewerCount || Number(d.total) || tk.viewers; toPanel('tiktok-state', tiktokState()); });
+  on(E.ROOM_USER || 'roomUser', d => { tk.viewers = d.viewerCount || Number(d.total) || tk.viewers; toPanel('tiktok-state', tiktokState()); toStage('tiktok-state', tiktokState()); });
   on(E.GIFT || 'gift', d => {
     const g = d.gift || d.giftDetails || {}; const ext = d.extendedGiftInfo || {};
     const giftType = g.type ?? g.giftType ?? ext.type;
@@ -549,6 +549,19 @@ ipcMain.handle('frame:delete', (_e, id) => {
 ipcMain.handle('update:check', async () => { try { return await checkUpdate(); } catch (e) { return { error: e.message }; } });
 ipcMain.handle('update:apply', async () => { try { const r = await applyUpdate(); if (r.ok) setTimeout(relaunch, 1200); return r; } catch (e) { return { error: e.message }; } });
 ipcMain.handle('update:rollback', () => { fs.rmSync(path.join(C.updatesRoot, 'current.json'), { force: true }); setTimeout(relaunch, 500); return true; });
+ipcMain.handle('config:export', async () => {
+  const r = await dialog.showSaveDialog(panelWin, { defaultPath: 'chua-live-' + (config.tiktok.username || 'cau-hinh') + '.json', filters: [{ name: 'Cấu hình', extensions: ['json'] }] });
+  if (r.canceled || !r.filePath) return false;
+  const c = JSON.parse(JSON.stringify(config)); delete c.window; if (c.update) delete c.update.token;
+  fs.writeFileSync(r.filePath, JSON.stringify(c, null, 2)); return r.filePath;
+});
+ipcMain.handle('config:import', async () => {
+  const r = await dialog.showOpenDialog(panelWin, { properties: ['openFile'], filters: [{ name: 'Cấu hình', extensions: ['json'] }] });
+  if (r.canceled || !r.filePaths[0]) return false;
+  const c = readJSON(r.filePaths[0]); if (!c || typeof c !== 'object') throw new Error('File cấu hình không hợp lệ');
+  delete c.window; const keepToken = config.update.token;
+  config = deepMerge(DEFAULTS, deepMerge(config, c)); config.update.token = keepToken; saveConfig(); broadcast('config', config); return true;
+});
 ipcMain.handle('open:userdir', () => shell.openPath(USER));
 ipcMain.handle('app:relaunch', () => relaunch());
 
@@ -560,6 +573,12 @@ app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.whenReady().then(async () => {
+  // cho phép màn hình LIVE dùng webcam (khung người dẫn)
+  try {
+    const { session } = require('electron');
+    session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(['media', 'camera', 'microphone', 'mediaKeySystem'].includes(perm)));
+    session.defaultSession.setPermissionCheckHandler((_wc, perm) => ['media', 'camera', 'microphone'].includes(perm));
+  } catch {}
   if (await startupUpdate()) return;
   createPanel();
   if (config.window.openStageOnStart !== false) createStage();

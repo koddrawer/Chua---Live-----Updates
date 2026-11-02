@@ -912,28 +912,41 @@ function applyLayout() {
 }
 let editMode = false;
 function setupEdit() {
-  for (const k of ['sermon', 'welcome']) {
-    const el = document.getElementById(k);
+  // [id phần tử, đọc cấu hình, ghi cấu hình]
+  const items = [
+    ['sermon', () => cfg.layout.sermon, o => ({ layout: { sermon: o } }), true],
+    ['welcome', () => cfg.layout.welcome, o => ({ layout: { welcome: o } }), true],
+    ['chat', () => cfg.layout.chat || {}, o => ({ layout: { chat: o } }), true],
+    ['camwrap', () => cfg.camera || {}, o => ({ camera: { x: o.x, y: o.y } }), false],
+  ];
+  for (const [id, get, put, resizable] of items) {
+    const el = document.getElementById(id); if (!el) continue;
     let drag = null;
     el.addEventListener('mousedown', e => {
       if (!editMode) return;
       const r = el.getBoundingClientRect();
-      if (e.clientX > r.right - 18 && e.clientY > r.bottom - 18) { drag = { resize: true }; return; } // góc resize
-      drag = { sx: e.clientX, sy: e.clientY, x: cfg.layout[k].x, y: cfg.layout[k].y }; e.preventDefault();
+      if (resizable && e.clientX > r.right - 18 && e.clientY > r.bottom - 18) { drag = { resize: true }; return; } // góc resize
+      drag = { sx: e.clientX, sy: e.clientY, x: get().x ?? el.offsetLeft, y: get().y ?? el.offsetTop }; e.preventDefault();
     });
     window.addEventListener('mousemove', e => { if (!drag || drag.resize) return; const nx = drag.x + (e.clientX - drag.sx) / scale, ny = drag.y + (e.clientY - drag.sy) / scale; el.style.left = nx + 'px'; el.style.top = ny + 'px'; drag.nx = nx; drag.ny = ny; });
     window.addEventListener('mouseup', () => {
       if (!drag) return;
-      const o = { x: Math.round(drag.nx ?? cfg.layout[k].x), y: Math.round(drag.ny ?? cfg.layout[k].y), w: Math.round(el.offsetWidth), h: Math.round(el.offsetHeight) };
-      drag = null; window.api.patchConfig({ layout: { [k]: o } });
+      const o = { x: Math.round(drag.nx ?? get().x ?? el.offsetLeft), y: Math.round(drag.ny ?? get().y ?? el.offsetTop) };
+      if (resizable) { o.w = Math.round(el.offsetWidth); o.h = Math.round(el.offsetHeight); }
+      drag = null; window.api.patchConfig(put(o));
     });
-    el.addEventListener('wheel', e => { if (!editMode) return; const f = Math.max(10, Math.min(40, cfg.layout[k].font + (e.deltaY < 0 ? 1 : -1))); window.api.patchConfig({ layout: { [k]: { font: f } } }); });
+    el.addEventListener('wheel', e => {
+      if (!editMode) return;
+      if (id === 'camwrap') { const sz = Math.max(80, Math.min(600, (cfg.camera.size || 200) + (e.deltaY < 0 ? 10 : -10))); window.api.patchConfig({ camera: { size: sz } }); return; }
+      const f = Math.max(10, Math.min(40, (get().font || 16) + (e.deltaY < 0 ? 1 : -1))); window.api.patchConfig(put({ font: f }));
+    });
   }
 }
 
 // ---------------- Khởi động ----------------
 let lastSwitchSec = null;
 async function applyAll(first) {
+  try { window.LiveExtra && LiveExtra.apply(); } catch (e) { console.error(e); }
   const ss = cfg.backgrounds && cfg.backgrounds.switchSeconds; if (!first && ss !== lastSwitchSec && !bgTrans) scheduleBgSwitch(); lastSwitchSec = ss;
   computeStepK();
   applyLayout();
@@ -956,8 +969,10 @@ async function main() {
   if (cfg.voice.sermonEnabled) setTimeout(() => AudioMgr.startSermon(), 1500);
   window.api.on('config', async c => { const charsChanged = JSON.stringify(c.characters) !== JSON.stringify(cfg.characters); cfg = c; if (charsChanged) await loadPacks(); applyAll(false); if (previewHold) showPreview(); if (gallery.length) layoutGallery(); });
   window.api.on('assets', async a => { charList = a.characters; frameList = a.frames; musicList = a.music; if (a.videos) videoList = a.videos; await loadPacks(); applyAll(false); });
+  window.api.on('tiktok-state', st => { try { window.LiveExtra && LiveExtra.onTikTok(st); } catch {} });
   window.api.on('live-event', ev => {
     try {
+      try { window.LiveExtra && LiveExtra.onEvent(ev); } catch (e) { console.error(e); }
       stats[ev.type === 'join' ? 'joins' : ev.type === 'chat' ? 'chats' : ev.type === 'gift' ? 'gifts' : 'likes']++;
       if (ev.type === 'join') onJoin(ev.user, 'join');
       else if (ev.type === 'chat' && cfg.scene.joinOnChat) onJoin(ev.user, 'chat');

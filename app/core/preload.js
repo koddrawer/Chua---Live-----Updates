@@ -34,6 +34,8 @@ contextBridge.exposeInMainWorld('api', {
   checkUpdate: () => ipcRenderer.invoke('update:check'),
   applyUpdate: () => ipcRenderer.invoke('update:apply'),
   rollback: () => ipcRenderer.invoke('update:rollback'),
+  exportConfig: () => ipcRenderer.invoke('config:export'),
+  importConfig: () => ipcRenderer.invoke('config:import'),
   openUserDir: () => ipcRenderer.invoke('open:userdir'),
   relaunch: () => ipcRenderer.invoke('app:relaunch'),
   on,

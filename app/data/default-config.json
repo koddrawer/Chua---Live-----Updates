@@ -113,7 +113,7 @@
     "sermonEnabled": true,
     "sermonGap": 1.2,
     "sectionGap": 4,
-    "shuffleSections": false,
+    "shuffleSections": true,
     "thanksTemplate": "A Di Đà Phật. Xin cảm ơn {name} đã cúng dường {gift}. Chúc mừng {name} rút được quẻ {fortuneName}, {level}. {verse}. Ý nghĩa: {fortune}. Nguyện cầu Tam Bảo gia hộ cho {name} thân tâm an lạc, vạn sự cát tường.",
     "greetEnabled": false,
     "greetTemplate": "A Di Đà Phật, chào mừng {name} đã đến chùa.",
@@ -187,6 +187,26 @@
       "showLevel": true,
       "showVerse": true,
       "showMeaning": true
+    },
+    "chat": {
+      "show": true,
+      "x": 10,
+      "y": 700,
+      "w": 250,
+      "h": 190,
+      "font": 15,
+      "opacity": 0.45,
+      "blur": true,
+      "max": 6
+    },
+    "liveinfo": {
+      "show": true,
+      "y": 1190,
+      "font": 15,
+      "clock": true,
+      "date": true,
+      "viewers": true,
+      "likes": true
     }
   },
   "content": {
@@ -223,5 +243,24 @@
     "enabled": true,
     "intensity": 1.0,
     "motes": 110
+  },
+  "camera": {
+    "enabled": false,
+    "deviceId": "",
+    "x": 520,
+    "y": 650,
+    "size": 180,
+    "shape": "circle",
+    "mirror": true,
+    "label": ""
+  },
+  "chatVoice": {
+    "enabled": true,
+    "readAll": false,
+    "readGap": 8,
+    "readTemplate": "{name} nói: {comment}",
+    "userCooldown": 45,
+    "globalCooldown": 6,
+    "replies": "a di da phat, adida, nam mo, mô phật => Nam Mô A Di Đà Phật. Chúc {name} thân tâm an lạc.\nbinh an, cau an => Nguyện cầu {name} cùng gia đình luôn bình an, mạnh khỏe.\ntai loc, cau tai, lam an, buon ban => Chúc {name} làm ăn phát đạt, tài lộc dồi dào.\ntinh duyen, cau duyen, nguoi yeu => Nguyện cho {name} sớm gặp được nhân duyên lành.\nsuc khoe, benh, om => Cầu chúc {name} và người thân thân thể khỏe mạnh, bệnh tật tiêu trừ.\nthi cu, di thi, hoc hanh => Chúc {name} học hành tấn tới, thi cử đỗ đạt.\ncha me, bo me, ba me, ong ba => Nguyện cầu ông bà cha mẹ của {name} sống lâu, an vui.\nbuon, met moi, stress, chan => {name} ơi, mọi khổ đau rồi sẽ qua. Hãy hít thở thật sâu và mỉm cười nhé.\nxin chao, hello, chao chua, hi => A Di Đà Phật, chào mừng {name} đã đến với chùa.\ncam on, thank => A Di Đà Phật, chùa xin cảm ơn {name}."
   }
 }

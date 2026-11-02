@@ -22,6 +22,7 @@
   <button data-tab="audio">Giọng & nhạc</button>
   <button data-tab="content">Lời giảng & quẻ</button>
   <button data-tab="layout">Bố cục màn hình</button>
+  <button data-tab="interact">Tương tác LIVE</button>
   <button data-tab="update">Cập nhật</button>
 </nav>
 <main>
@@ -349,6 +350,63 @@
       <label>Vị trí Y<input type="number" data-k="layout.title.y"></label></div>
   </div>
   <div class="row"><button id="resetLayout">Khôi phục bố cục mặc định</button></div>
+</section>
+
+<!-- ============ INTERACT ============ -->
+<section id="tab-interact" class="tab">
+  <div class="card"><p class="muted small" style="margin:0">Giúp buổi LIVE thể hiện rõ là <b>đang trực tiếp</b> (giảm bị TikTok nghi phát lại/không nguyên bản): hiện bình luận thật, đồng hồ giờ thật, số người xem, giọng trả lời bình luận, khung webcam người dẫn và mỗi nick một giao diện khác nhau. Hiệu quả nhất vẫn là có người thật nói chuyện qua mic trong TikTok LIVE Studio.</p></div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Bảng bình luận trực tiếp</h3>
+      <label class="chk"><input type="checkbox" data-k="layout.chat.show"> Hiện bình luận mới nhất trên màn hình LIVE</label>
+      <div class="grid3">
+        <label>X<input type="number" data-k="layout.chat.x"></label><label>Y<input type="number" data-k="layout.chat.y"></label><label>Số dòng<input type="number" data-k="layout.chat.max"></label>
+        <label>Rộng<input type="number" data-k="layout.chat.w"></label><label>Cao<input type="number" data-k="layout.chat.h"></label><label>Cỡ chữ<input type="number" data-k="layout.chat.font"></label>
+      </div>
+      <label>Độ trong suốt nền<input type="range" min="0" max="1" step="0.01" data-k="layout.chat.opacity"></label>
+      <h3>Thanh LIVE (giờ thật · ngày · người xem · tim)</h3>
+      <label class="chk"><input type="checkbox" data-k="layout.liveinfo.show"> Hiện thanh LIVE</label>
+      <div class="grid2">
+        <label class="chk"><input type="checkbox" data-k="layout.liveinfo.clock"> Đồng hồ</label><label class="chk"><input type="checkbox" data-k="layout.liveinfo.date"> Ngày tháng</label>
+        <label class="chk"><input type="checkbox" data-k="layout.liveinfo.viewers"> Số người xem</label><label class="chk"><input type="checkbox" data-k="layout.liveinfo.likes"> Số tim</label>
+        <label>Vị trí Y<input type="number" data-k="layout.liveinfo.y"></label><label>Cỡ chữ<input type="number" data-k="layout.liveinfo.font"></label>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Giọng trả lời bình luận</h3>
+      <label class="chk"><input type="checkbox" data-k="chatVoice.enabled"> Đọc câu trả lời khi bình luận có từ khoá</label>
+      <label>Từ khoá → câu trả lời (mỗi dòng: <code>từ khoá 1, từ khoá 2 => câu trả lời</code>; {name} = tên, {comment} = bình luận; từ khoá không cần dấu)<textarea rows="9" data-k="chatVoice.replies" spellcheck="false"></textarea></label>
+      <div class="grid2">
+        <label>Mỗi người được trả lời lại sau (giây)<input type="number" data-k="chatVoice.userCooldown"></label>
+        <label>Giữa 2 câu trả lời (giây)<input type="number" data-k="chatVoice.globalCooldown"></label>
+      </div>
+      <label class="chk"><input type="checkbox" data-k="chatVoice.readAll"> Đọc to cả bình luận không có từ khoá</label>
+      <div class="grid2"><label>Mẫu đọc bình luận<input data-k="chatVoice.readTemplate"></label><label>Cách nhau ít nhất (giây)<input type="number" data-k="chatVoice.readGap"></label></div>
+      <div class="row"><input id="testChat" placeholder="Gõ thử bình luận, vd: cầu bình an cho gia đình" style="flex:1"><button id="btnTestChat">Gửi thử</button></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Khung webcam người dẫn</h3>
+      <label class="chk"><input type="checkbox" data-k="camera.enabled"> Hiện webcam trên màn hình LIVE</label>
+      <div class="row"><select id="camSel" style="flex:1"></select><button id="btnCamScan">Tìm webcam</button></div>
+      <div class="grid3">
+        <label>X<input type="number" data-k="camera.x"></label><label>Y<input type="number" data-k="camera.y"></label><label>Kích thước<input type="number" data-k="camera.size"></label>
+      </div>
+      <div class="grid3">
+        <label>Hình dạng<select data-k="camera.shape"><option value="circle">Tròn</option><option value="rect">Chữ nhật</option></select></label>
+        <label class="chk"><input type="checkbox" data-k="camera.mirror"> Lật gương</label>
+        <label>Chữ dưới khung<input data-k="camera.label" placeholder="vd: Sư thầy"></label>
+      </div>
+      <p class="muted small">Âm thanh mic hãy thêm trực tiếp trong TikTok LIVE Studio. Bật kéo-thả ở tab Bố cục để kéo khung webcam, lăn chuột để đổi cỡ.</p>
+    </div>
+    <div class="card">
+      <h3>Mỗi nick một giao diện</h3>
+      <p class="muted small">Chạy nhiều nick cùng lúc với nội dung y hệt rất dễ bị đánh dấu "copy". Bấm ngẫu nhiên hoá trên mỗi máy/nick để thay đổi nền, nhân vật, giọng, nhạc, tốc độ, hiệu ứng, dòng chữ… hoặc lưu/nạp cấu hình riêng cho từng nick.</p>
+      <div class="row wrap"><button id="btnRandomize" class="primary">Ngẫu nhiên hoá giao diện nick này</button><button id="btnExport">Lưu cấu hình ra file</button><button id="btnImport">Nạp cấu hình từ file</button></div>
+      <p id="profMsg" class="muted small"></p>
+    </div>
+  </div>
 </section>
 
 <!-- ============ UPDATE ============ -->
