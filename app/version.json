@@ -1,4 +1,4 @@
 {
-  "version": "1.0.13",
-  "notes": "Tự động zoom chậm vào người đang đi mỗi 5 giây (ưu tiên người xem thật), giữ 2 giây; camera chuyển mượt giữa các lượt zoom"
+  "version": "1.0.14",
+  "notes": "Avatar + khung người donate bay lên treo lơ lửng hai bên Đức Phật (mức càng cao càng to, hết chỗ thì người treo lâu nhất tan biến)"
 }

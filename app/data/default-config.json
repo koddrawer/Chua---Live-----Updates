@@ -66,7 +66,8 @@
       "fortuneLevel": "Cát",
       "kneelRounds": 2,
       "color": "#ffd88a",
-      "cardSeconds": 0
+      "cardSeconds": 0,
+      "gallerySize": 0
     },
     {
       "min": 10,
@@ -75,7 +76,8 @@
       "fortuneLevel": "Đại Cát",
       "kneelRounds": 3,
       "color": "#ffc861",
-      "cardSeconds": 0
+      "cardSeconds": 0,
+      "gallerySize": 0
     },
     {
       "min": 100,
@@ -84,7 +86,8 @@
       "fortuneLevel": "Thượng Cát",
       "kneelRounds": 3,
       "color": "#ffe9b0",
-      "cardSeconds": 0
+      "cardSeconds": 0,
+      "gallerySize": 0
     },
     {
       "min": 500,
@@ -93,7 +96,8 @@
       "fortuneLevel": "Thượng Thượng Cát",
       "kneelRounds": 4,
       "color": "#fff3cf",
-      "cardSeconds": 0
+      "cardSeconds": 0,
+      "gallerySize": 0
     }
   ],
   "voice": {
@@ -195,5 +199,23 @@
     "fadeSeconds": 2,
     "random": true,
     "disabled": []
+  },
+  "gallery": {
+    "enabled": true,
+    "showName": true,
+    "baseSize": 72,
+    "sizeGrow": 1.2,
+    "left": {
+      "x": 6,
+      "y": 20,
+      "w": 210,
+      "h": 360
+    },
+    "right": {
+      "x": 508,
+      "y": 236,
+      "w": 206,
+      "h": 390
+    }
   }
 }

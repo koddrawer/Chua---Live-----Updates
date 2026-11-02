@@ -219,6 +219,25 @@
     <p class="muted small">Biến dùng trong các dòng chữ: {name} tên · {tier} danh hiệu · {gift} quà · {coins} số xu · {fortuneName} tên quẻ · {level} mức quẻ · {fortune} ý nghĩa · {verse} câu thơ. Toạ độ theo khung 720×1280.</p>
     <div class="row"><button id="resetCard">Khôi phục mặc định thẻ & ô quẻ</button></div>
   </div>
+  <div class="card">
+    <h3>Avatar donate treo hai bên Đức Phật <span class="muted small">— sau khi thẻ chúc phúc tắt, avatar + khung bay lên lơ lửng; mức càng cao càng to; hết chỗ thì người treo lâu nhất tan biến</span></h3>
+    <div class="grid3">
+      <div>
+        <label class="chk"><input type="checkbox" data-k="gallery.enabled"> Bật treo avatar</label>
+        <label class="chk"><input type="checkbox" data-k="gallery.showName"> Hiện tên dưới avatar</label>
+        <label>Cỡ avatar mức thấp nhất (px)<input type="number" data-k="gallery.baseSize"></label>
+        <label>Mỗi mức to hơn (×)<input type="number" step="0.02" data-k="gallery.sizeGrow"></label>
+        <div class="row"><button id="btnGalleryClear">Xoá hết avatar đang treo</button></div>
+      </div>
+      <div><h3>Khu vực bên trái</h3><div class="grid2">
+        <label>X<input type="number" data-k="gallery.left.x"></label><label>Y<input type="number" data-k="gallery.left.y"></label>
+        <label>Rộng<input type="number" data-k="gallery.left.w"></label><label>Cao<input type="number" data-k="gallery.left.h"></label></div></div>
+      <div><h3>Khu vực bên phải</h3><div class="grid2">
+        <label>X<input type="number" data-k="gallery.right.x"></label><label>Y<input type="number" data-k="gallery.right.y"></label>
+        <label>Rộng<input type="number" data-k="gallery.right.w"></label><label>Cao<input type="number" data-k="gallery.right.h"></label></div></div>
+    </div>
+    <p class="muted small">Cỡ riêng cho từng mức: cột “Cỡ treo” trong bảng mức donate (0 = tự tính). Toạ độ theo khung 720×1280.</p>
+  </div>
 </section>
 
 <!-- ============ AUDIO ============ -->

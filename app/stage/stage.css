@@ -68,3 +68,14 @@ body.edit #editHint { display: block; }
 
 .dc-head { font-family: 'Dancing Script', 'Noto Serif', serif; font-weight: 700; font-size: 34px; color: #fff0c2; text-shadow: 0 0 14px rgba(255,170,60,.95), 0 2px 3px #000; margin-bottom: 6px; text-align: center; }
 body.edit #cardLayer .dc-frame, body.edit #cardLayer .dfortune { pointer-events: auto; cursor: move; outline: 2px dashed #49f; }
+
+/* avatar donate treo hai bên Đức Phật */
+#gallery { position: absolute; inset: 0; pointer-events: none; }
+.gitem { position: absolute; transform-origin: 0 0; transition: left 1.8s cubic-bezier(.35,.75,.25,1), top 1.8s cubic-bezier(.35,.75,.25,1), transform 1.8s cubic-bezier(.35,.75,.25,1), opacity 1.2s, filter 1.2s; }
+.gitem .gbob { display: flex; flex-direction: column; align-items: center; animation: gbob 4.2s ease-in-out infinite; }
+.gitem .gframe { position: relative; filter: drop-shadow(0 0 10px rgba(255,200,90,.75)); }
+.gitem .gframe .av { position: absolute; border-radius: 50%; object-fit: cover; background: #6b4512; }
+.gitem .gframe .fr { position: relative; display: block; width: 100%; height: 100%; }
+.gitem .gname { margin-top: -2px; font-weight: 700; color: #fff2cf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; text-shadow: 0 0 6px rgba(255,170,60,.9), 0 1px 2px #000, 0 0 2px #000; }
+.gitem.gone { opacity: 0; filter: blur(8px) brightness(2.2); transform: scale(1.35) !important; transition: opacity 1.2s, filter 1.2s, transform 1.2s; }
+@keyframes gbob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }

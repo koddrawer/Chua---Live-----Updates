@@ -233,6 +233,7 @@ function renderTiers() {
       <label>Số lần lạy<input type="number" min="0" data-f="kneelRounds" value="${t.kneelRounds ?? 3}"></label>
       <label>Màu tên<input type="color" data-f="color" value="${t.color || '#ffe28a'}"></label>
       <label>Hiện (giây)<input type="number" min="0" step="0.5" data-f="cardSeconds" value="${t.cardSeconds || 0}"></label>
+      <label>Cỡ treo<input type="number" min="0" data-f="gallerySize" value="${t.gallerySize || 0}"></label>
       <label>Khung avatar<select data-f="frame">${frameOpts(t.frame)}</select></label>
       <img class="fprev" src="${fr ? fr.url : ''}">
       <div class="row"><button class="mini test">Thử</button><button class="mini danger del">Xoá</button></div>`;
@@ -305,6 +306,8 @@ function renderVideos() {
 }
 $('#btnAddVideo').onclick = async () => { const f = await window.api.openDialog({ multi: true, filters: [{ name: 'Video', extensions: ['mp4', 'webm', 'mov', 'm4v'] }] }); if (f.length) await window.api.addVideo(f.map(x => x.path)); };
 $('#btnNextBg').onclick = () => window.api.stageCmd({ type: 'bg-next' });
+
+$('#btnGalleryClear').onclick = () => window.api.stageCmd({ type: 'gallery-clear' });
 
 // ---------- Âm thanh ----------
 $('#btnVoiceTest').onclick = async () => {

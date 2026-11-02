@@ -601,11 +601,87 @@ async function pumpDonors() {
     const voiceP = AudioMgr.say(voiceText);
     const secs = (tier.cardSeconds > 0 ? tier.cardSeconds : cfg.scene.cardSeconds);
     await Promise.all([voiceP, sleep(secs * 1000)]);
+    const cardRect = previewHold ? null : cardAvatarRect();
     if (!previewHold) hideCard();
+    addToGallery({ user: d.user, tier, avatar: av, from: cardRect });
     await sleep(700);
   } catch (e) { window.api.log('Lỗi donate: ' + e.message, 'error'); }
   donorBusy = false;
   pumpDonors();
+}
+// ---------------- Avatar donate treo hai bên Đức Phật ----------------
+let gallery = []; // { uid, el, size, side, born }
+let gallerySide = 0;
+function cardAvatarRect() {
+  const el = curCard && curCard.el && curCard.el.querySelector('.dc-frame'); if (!el) return null;
+  const L = cfg.layout.card; const fw = el.offsetWidth, fh = el.offsetHeight;
+  return { x: (L.x ?? 360) - fw / 2, y: L.y + (el.offsetTop || 0), w: fw, h: fh };
+}
+function tierSize(tier) {
+  const G = cfg.gallery || {}; if (tier.gallerySize > 0) return tier.gallerySize;
+  const ts = (cfg.tiers || []).slice().sort((a, b) => a.min - b.min); const i = Math.max(0, ts.findIndex(t => t.min === tier.min));
+  return Math.round((G.baseSize || 72) * Math.pow(G.sizeGrow || 1.2, i));
+}
+function addToGallery(o) {
+  const G = cfg.gallery || {}; if (G.enabled === false || !o.user) return;
+  const fr = frameById(o.tier.frame); if (!fr) return;
+  // người này đã treo -> thay bằng cái mới (lớn hơn nếu mức cao hơn)
+  const old = gallery.find(g => g.uid === o.user.id); let prevSize = 0;
+  if (old) { prevSize = old.size; removeGalleryItem(old, true); }
+  const size = Math.max(prevSize, tierSize(o.tier));
+  const el = document.createElement('div'); el.className = 'gitem';
+  const fh = size * fr.h / fr.w, dd = fr.r * size * 2 * 1.06;
+  el.innerHTML = `<div class="gbob" style="animation-delay:${(-Math.random() * 4).toFixed(2)}s"><div class="gframe" style="width:${size}px;height:${fh}px"><img class="av"><img class="fr"></div>${G.showName !== false ? '<div class="gname"></div>' : ''}</div>`;
+  const av = el.querySelector('.av'); av.referrerPolicy = 'no-referrer';
+  Object.assign(av.style, { width: dd + 'px', height: dd + 'px', left: (fr.cx * size - dd / 2) + 'px', top: (fr.cy * fh - dd / 2) + 'px' });
+  av.onerror = () => { av.onerror = null; av.src = defaultAvatar(o.user.nickname); };
+  av.src = o.avatar || defaultAvatar(o.user.nickname);
+  el.querySelector('.fr').src = fr.url;
+  const nm = el.querySelector('.gname'); if (nm) { nm.textContent = o.user.nickname; nm.style.fontSize = Math.max(11, Math.round(size * 0.16)) + 'px'; nm.style.maxWidth = (size + 30) + 'px'; if (o.tier.color) nm.style.color = o.tier.color; }
+  // điểm xuất phát: chỗ avatar trên thẻ chúc phúc
+  const f = o.from || { x: W / 2 - size / 2, y: 300, w: size };
+  el.style.left = f.x + 'px'; el.style.top = f.y + 'px'; el.style.transform = `scale(${(f.w / size).toFixed(3)})`;
+  document.getElementById('gallery').appendChild(el);
+  const item = { uid: o.user.id, el, size, h: fh + (nm ? Math.max(11, size * 0.16) * 1.5 : 0), born: now, side: -1 };
+  // chọn bên ít chỗ đã dùng hơn
+  const used = [0, 1].map(sd => gallery.filter(g => g.side === sd).reduce((a, g) => a + g.size * g.h, 0));
+  item.side = used[0] === used[1] ? (gallerySide++ % 2) : (used[0] < used[1] ? 0 : 1);
+  gallery.push(item);
+  requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add('fly'); layoutGallery(); }));
+}
+function removeGalleryItem(g, instant) {
+  gallery = gallery.filter(x => x !== g);
+  if (instant) { g.el.remove(); return; }
+  g.el.classList.add('gone');
+  setTimeout(() => g.el.remove(), 1300);
+}
+function galleryAreas() {
+  const G = cfg.gallery || {};
+  return [G.left || { x: 6, y: 20, w: 210, h: 360 }, G.right || { x: 508, y: 236, w: 206, h: 390 }];
+}
+function layoutGallery() {
+  const areas = galleryAreas(), gap = 8;
+  for (let guard = 0; guard < 50; guard++) {
+    let overflow = null;
+    for (const sd of [0, 1]) {
+      const A = areas[sd];
+      const items = gallery.filter(g => g.side === sd).sort((a, b) => b.born - a.born); // mới nhất ở trên
+      let x = 0, y = 0, rowH = 0;
+      for (const g of items) {
+        const w = g.size + 10, h = g.h + 6;
+        if (x > 0 && x + w > A.w) { x = 0; y += rowH + gap; rowH = 0; }
+        if (y + h > A.h && !(x === 0 && y === 0)) { overflow = overflow && overflow.born < g.born ? overflow : g; continue; }
+        // căn giữa theo bề rộng khu vực khi chỉ có 1 cột
+        g.tx = A.x + x; g.ty = A.y + y;
+        x += w + gap; rowH = Math.max(rowH, h);
+      }
+    }
+    if (!overflow) break;
+    // hết chỗ -> người treo lâu nhất tan biến
+    const oldest = gallery.filter(g => g.side === overflow.side).sort((a, b) => a.born - b.born)[0] || overflow;
+    removeGalleryItem(oldest, false);
+  }
+  for (const g of gallery) { g.el.style.left = g.tx + 'px'; g.el.style.top = g.ty + 'px'; if (g.el.classList.contains('fly')) g.el.style.transform = 'scale(1)'; }
 }
 function pickFortune() { const f = content.fortunes || []; return f.length ? f[Math.floor(Math.random() * f.length)] : { name: 'Bình An', verse: [], meaning: 'Bình an may mắn' }; }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -776,7 +852,7 @@ async function main() {
   await applyAll(true);
   videoList = d.videos || []; initBg();
   if (cfg.voice.sermonEnabled) setTimeout(() => AudioMgr.startSermon(), 1500);
-  window.api.on('config', async c => { const charsChanged = JSON.stringify(c.characters) !== JSON.stringify(cfg.characters); cfg = c; if (charsChanged) await loadPacks(); applyAll(false); if (previewHold) showPreview(); });
+  window.api.on('config', async c => { const charsChanged = JSON.stringify(c.characters) !== JSON.stringify(cfg.characters); cfg = c; if (charsChanged) await loadPacks(); applyAll(false); if (previewHold) showPreview(); if (gallery.length) layoutGallery(); });
   window.api.on('assets', async a => { charList = a.characters; frameList = a.frames; musicList = a.music; if (a.videos) videoList = a.videos; await loadPacks(); applyAll(false); });
   window.api.on('live-event', ev => {
     try {
@@ -795,6 +871,7 @@ async function main() {
     else if (cmd.type === 'sermon-start') AudioMgr.startSermon();
     else if (cmd.type === 'music-next') AudioMgr.nextMusic();
     else if (cmd.type === 'say') AudioMgr.say(cmd.text);
+    else if (cmd.type === 'gallery-clear') { gallery.slice().forEach(g => removeGalleryItem(g, false)); }
     else if (cmd.type === 'bg-next') switchBg(cmd.id);
     else if (cmd.type === 'card-preview') { previewHold = !!cmd.hold; previewTier = cmd.tier || 0; if (previewHold) showPreview(); else hideCard(); }
     else if (cmd.type === 'zoom-test') { const c = chars.find(x => !x.removing); if (c) camFocus(c); }
