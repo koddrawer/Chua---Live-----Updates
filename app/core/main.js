@@ -166,14 +166,15 @@ function refreshAssets() { broadcast('assets', { characters: listCharacters(), f
 let tk = { conn: null, wanted: false, username: '', status: 'disconnected', roomId: null, viewers: 0, retryTimer: null, lib: null, err: '' };
 function tiktokState() { return { status: tk.status, username: tk.username, roomId: tk.roomId, viewers: tk.viewers, err: tk.err }; }
 function setTkStatus(s, err = '') { tk.status = s; tk.err = err; toPanel('tiktok-state', tiktokState()); toStage('tiktok-state', tiktokState()); }
-function pickImg(img) { if (!img) return ''; const u = img.url || img.urlList || img.url_list; return Array.isArray(u) ? (u[0] || '') : (typeof u === 'string' ? u : ''); }
+function pickImg(img) { if (!img) return ''; const u = img.urlList || img.url_list || img.url || img.urls; return Array.isArray(u) ? (u.find(x => /^https?:/.test(x) && !/\.heic/i.test(x)) || u[0] || '') : (typeof u === 'string' ? u : ''); }
 function normUser(u) {
   u = u || {};
+  const uid = u.uniqueId || u.displayId || u.display_id || '';
   return {
-    id: String(u.userId || u.uniqueId || u.id || u.displayId || u.nickname || ''),
-    uniqueId: u.uniqueId || u.displayId || '',
-    nickname: (u.nickname || u.uniqueId || 'Phật tử').trim(),
-    avatar: pickImg(u.profilePictureMedium) || pickImg(u.profilePicture) || pickImg(u.profilePictureLarge) || u.profilePictureUrl || '',
+    id: String(u.userId || u.id || uid || u.nickname || ''),
+    uniqueId: uid,
+    nickname: (u.nickname || uid || 'Phật tử').trim(),
+    avatar: pickImg(u.avatarMedium) || pickImg(u.avatarThumb) || pickImg(u.avatarLarge) || pickImg(u.profilePictureMedium) || pickImg(u.profilePicture) || pickImg(u.profilePictureLarge) || u.profilePictureUrl || '',
   };
 }
 function emitLive(ev) { toStage('live-event', ev); toPanel('live-event', ev); }
@@ -198,18 +199,18 @@ async function tiktokConnect(username, opts = {}) {
   const E = WebcastEvent || {};
   const on = (name, fn) => { try { conn.on(name, d => { try { fn(d); } catch (e) { log('Lỗi xử lý sự kiện ' + name + ': ' + e.message, 'error'); } }); } catch {} };
   on(E.MEMBER || 'member', d => emitLive({ type: 'join', user: normUser(d.user) }));
-  on(E.CHAT || 'chat', d => emitLive({ type: 'chat', user: normUser(d.user), text: d.comment || '' }));
+  on(E.CHAT || 'chat', d => emitLive({ type: 'chat', user: normUser(d.user), text: d.comment || d.content || '' }));
   on(E.FOLLOW || 'follow', d => emitLive({ type: 'follow', user: normUser(d.user) }));
   on(E.SHARE || 'share', d => emitLive({ type: 'share', user: normUser(d.user) }));
-  on(E.LIKE || 'like', d => emitLive({ type: 'like', user: normUser(d.user), count: d.likeCount || 1, total: d.totalLikeCount || 0 }));
-  on(E.ROOM_USER || 'roomUser', d => { tk.viewers = d.viewerCount || tk.viewers; toPanel('tiktok-state', tiktokState()); });
+  on(E.LIKE || 'like', d => emitLive({ type: 'like', user: normUser(d.user), count: d.likeCount || d.count || 1, total: d.totalLikeCount || Number(d.total) || 0 }));
+  on(E.ROOM_USER || 'roomUser', d => { tk.viewers = d.viewerCount || Number(d.total) || tk.viewers; toPanel('tiktok-state', tiktokState()); });
   on(E.GIFT || 'gift', d => {
-    const g = d.giftDetails || {}; const ext = d.extendedGiftInfo || {};
-    const giftType = g.giftType ?? ext.type;
+    const g = d.gift || d.giftDetails || {}; const ext = d.extendedGiftInfo || {};
+    const giftType = g.type ?? g.giftType ?? ext.type;
     if (giftType === 1 && !d.repeatEnd) return; // đang combo — chờ kết thúc
-    const per = Number(g.diamondCount || ext.diamond_count || ext.diamondCount || 0);
-    const repeat = Math.max(1, Number(d.repeatCount || 1));
-    emitLive({ type: 'gift', user: normUser(d.user), giftName: g.giftName || ext.name || 'quà', giftImage: pickImg(g.giftImage) || pickImg(ext.image), repeat, coins: per * repeat, perCoin: per });
+    const per = Number(g.diamondCount || g.diamond_count || ext.diamond_count || ext.diamondCount || 0);
+    const repeat = Math.max(1, Number(d.repeatCount || d.comboCount || 1));
+    emitLive({ type: 'gift', user: normUser(d.user), giftName: g.name || g.giftName || ext.name || 'quà', giftImage: pickImg(g.image) || pickImg(g.giftImage) || pickImg(g.icon), repeat, coins: per * repeat, perCoin: per });
   });
   on(E.STREAM_END || 'streamEnd', () => { log('Buổi LIVE đã kết thúc', 'warn'); setTkStatus('ended'); });
   on((ControlEvent && ControlEvent.DISCONNECTED) || 'disconnected', () => {

@@ -1,4 +1,4 @@
 {
-  "version": "1.0.9",
-  "notes": "Cập nhật nhận bản mới ngay lập tức (không chờ bộ đệm GitHub 5 phút)"
+  "version": "1.0.10",
+  "notes": "Hiện avatar ở bảng chào mừng (sửa đọc avatar theo định dạng TikTok mới); sửa đọc quà: đúng số xu, không tính trùng khi tặng combo"
 }
