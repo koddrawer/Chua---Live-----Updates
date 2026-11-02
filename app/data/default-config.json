@@ -47,12 +47,13 @@
     "joinOnLike": true,
     "rejoinCooldown": 20,
     "videoRate": 1.0,
-    "vanishY": 690,
+    "vanishY": 0,
     "autoZoom": true,
     "autoZoomInterval": 5,
     "autoZoomScale": 1.7,
     "autoZoomEase": 1.6,
-    "autoZoomHold": 2
+    "autoZoomHold": 2,
+    "stairs": "image"
   },
   "characters": {
     "disabled": [],
@@ -217,5 +218,10 @@
       "w": 206,
       "h": 390
     }
+  },
+  "effects": {
+    "enabled": true,
+    "intensity": 1.0,
+    "motes": 110
   }
 }

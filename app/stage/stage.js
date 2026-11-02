@@ -22,8 +22,12 @@ const cam = { x: W / 2, y: H / 2, z: 1, anim: null };
 
 // ---------------- Hình học bậc thang (toạ độ theo video 720x1280) ----------------
 // [y, tâm x, nửa bề rộng mặt bậc đi được]
-const STAIRS = [[1300, 368, 300], [1180, 368, 278], [1100, 367, 255], [960, 368, 220], [880, 369, 172], [800, 372, 124], [720, 372, 80], [660, 372, 50], [640, 372, 39]];
-const START_Y = 1165, EMERGE_Y = 1300; let DOOR_Y = 690;
+// Hình học bậc thang [y, tâm x, nửa bề rộng mặt bậc]: 'image' = 3 ảnh nền mới, 'video' = video cũ
+const GEO = {
+  image: { stairs: [[1330, 360, 312], [1200, 360, 300], [1120, 360, 285], [1040, 360, 255], [960, 360, 195], [880, 360, 152], [800, 360, 105], [760, 360, 80], [720, 360, 55], [700, 360, 42], [690, 360, 36]], start: 1205, emerge: 1335, door: 738, cloudTop: 1120 },
+  video: { stairs: [[1300, 368, 300], [1180, 368, 278], [1100, 367, 255], [960, 368, 220], [880, 369, 172], [800, 372, 124], [720, 372, 80], [660, 372, 50], [640, 372, 39]], start: 1165, emerge: 1300, door: 690, cloudTop: 1060 },
+};
+let STAIRS = GEO.image.stairs, START_Y = GEO.image.start, EMERGE_Y = GEO.image.emerge, DOOR_Y = GEO.image.door, CLOUD_TOP = GEO.image.cloudTop;
 function stairAt(y) {
   if (y >= STAIRS[0][0]) return { c: STAIRS[0][1], hw: STAIRS[0][2] };
   for (let i = 0; i < STAIRS.length - 1; i++) {
@@ -32,11 +36,13 @@ function stairAt(y) {
   }
   const l = STAIRS[STAIRS.length - 1]; return { c: l[1], hw: l[2] };
 }
-const BASE_HW = 255;
+const BASE_HW = 270;
 function charHeightAt(y) { return stairAt(y).hw * 0.64 * (cfg ? cfg.scene.charScale : 1); }
 let STEP_K = 0.1; // dy mỗi bước = STEP_K * hw
 function computeStepK() {
-  DOOR_Y = Math.max(642, Math.min(900, (cfg.scene.vanishY || 690)));
+  const G = GEO[cfg.scene.stairs] || GEO.image;
+  STAIRS = G.stairs; START_Y = G.start; EMERGE_Y = G.emerge; CLOUD_TOP = G.cloudTop;
+  const vy = cfg.scene.vanishY; DOOR_Y = (!vy || vy === 690) ? G.door : Math.max(G.stairs[G.stairs.length - 1][0], Math.min(950, vy));
   let I = 0; for (let y = DOOR_Y; y < START_Y; y += 1) I += 1 / stairAt(y).hw;
   const s = cfg.scene;
   const cycle = s.stepsPerBow * s.stepSeconds + s.bowSeconds;
@@ -348,6 +354,7 @@ const vbuf = document.createElement('canvas'); vbuf.width = W; vbuf.height = H; 
 let vbufReady = false;
 function grab(slot) {
   const v = slot.el, b = slot.buf;
+  if (slot.img) { if (!b.ready && slot.img.complete && slot.img.naturalWidth) { b.x.clearRect(0, 0, W, H); b.x.drawImage(slot.img, 0, 0, W, H); b.ready = true; } return b.ready; }
   if (v.readyState >= 2 && !v.seeking && v.videoWidth) {
     const t = v.currentTime;
     if (t !== b.t || !b.ready) { b.x.drawImage(v, 0, 0, W, H); b.t = t; b.ready = true; }
@@ -365,14 +372,18 @@ function updateVideoBuffer() {
     if (okNx && k > 0) { vbx.globalAlpha = okCur ? k : 1; vbx.drawImage(nx.buf.c, 0, 0); vbx.globalAlpha = 1; }
     vbufReady = vbufReady || okCur || okNx;
     if (k >= 1) { // xong chuyển cảnh
-      cur.el.pause(); curSlot = 1 - curSlot; bgTrans = null; scheduleBgSwitch();
+      if (!cur.img) cur.el.pause(); curSlot = 1 - curSlot; bgTrans = null; scheduleBgSwitch();
     } else if (bgTrans && performance.now() - bgTrans.t0 > 15000) { bgTrans = null; } // video mới lỗi -> bỏ qua
   } else if (okCur) { vbx.drawImage(cur.buf.c, 0, 0); vbufReady = true; }
   return vbufReady;
 }
 function enabledVideos() { const dis = (cfg.backgrounds && cfg.backgrounds.disabled) || []; const l = videoList.filter(v => !dis.includes(v.id)); return l.length ? l : videoList.slice(0, 1); }
 function scheduleBgSwitch() { const s = (cfg.backgrounds && cfg.backgrounds.switchSeconds) || 0; nextSwitchAt = s > 0 ? performance.now() + s * 1000 : Infinity; }
-function startBg(v, slotIdx) { const sl = slots[slotIdx]; sl.id = v.id; sl.buf.ready = false; sl.buf.t = -1; sl.el.src = v.url; sl.el.playbackRate = cfg.scene.videoRate || 1; sl.el.play().catch(() => {}); }
+function startBg(v, slotIdx) {
+  const sl = slots[slotIdx]; sl.id = v.id; sl.def = v; sl.buf.ready = false; sl.buf.t = -1;
+  if (v.type === 'image') { sl.el.pause(); sl.el.removeAttribute('src'); sl.el.load(); sl.img = new Image(); sl.img.src = v.url; }
+  else { sl.img = null; sl.el.src = v.url; sl.el.playbackRate = cfg.scene.videoRate || 1; sl.el.play().catch(() => {}); }
+}
 function switchBg(forceId) {
   if (bgTrans) return;
   const list = enabledVideos(); const curId = slots[curSlot].id;
@@ -387,8 +398,95 @@ function initBg() {
   startBg(first, curSlot); scheduleBgSwitch();
 }
 setInterval(() => { if (cfg && !bgTrans && performance.now() >= nextSwitchAt) switchBg(); }, 500);
+// ---------------- Hiệu ứng ánh sáng trên ảnh nền ----------------
+let motes = [];
+function bgWeights() { // [def, weight] của nền hiện tại và nền đang chuyển tới
+  const out = []; const cur = slots[curSlot];
+  let k = 0; if (bgTrans && bgTrans.start != null) k = Math.min(1, (performance.now() - bgTrans.start) / (bgTrans.dur * 1000));
+  if (cur.def) out.push([cur.def, 1 - k]);
+  if (bgTrans) { const nx = slots[1 - curSlot]; if (nx.def && k > 0) out.push([nx.def, k]); }
+  return out;
+}
+function fxOn() { return !cfg.effects || cfg.effects.enabled !== false; }
+function drawHalo(h, w, I) {
+  const t = now;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  // quầng sáng thở
+  const R = h.r * (1 + 0.05 * Math.sin(t * 0.9));
+  let g = ctx.createRadialGradient(h.x, h.y, R * 0.15, h.x, h.y, R * 1.25);
+  g.addColorStop(0, `rgba(255,240,190,${0.07 * w * I})`); g.addColorStop(0.35, `rgba(255,220,140,${0.09 * w * I})`); g.addColorStop(0.7, `rgba(255,200,110,${0.06 * w * I})`); g.addColorStop(1, 'rgba(255,170,60,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(h.x, h.y, R * 1.25, 0, Math.PI * 2); ctx.fill();
+  // tia hào quang xoay chậm, 2 lớp ngược chiều
+  for (const [n, sp, len, a0] of [[28, 0.05, 1.55, 0.11], [16, -0.03, 1.9, 0.07]]) {
+    ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(t * sp);
+    for (let i = 0; i < n; i++) {
+      ctx.rotate(Math.PI * 2 / n);
+      const L = h.r * len * (0.8 + 0.2 * Math.sin(t * 1.3 + i * 2.1));
+      const gg = ctx.createLinearGradient(0, h.r * 0.35, 0, L);
+      gg.addColorStop(0, `rgba(255,236,170,${a0 * w * I * (0.6 + 0.4 * Math.sin(t * 2 + i))})`); gg.addColorStop(1, 'rgba(255,210,120,0)');
+      ctx.fillStyle = gg; ctx.beginPath(); const wd = h.r * 0.035; ctx.moveTo(-wd, h.r * 0.35); ctx.lineTo(0, L); ctx.lineTo(wd, h.r * 0.35); ctx.fill();
+    }
+    ctx.restore();
+  }
+  // vòng sáng lan toả
+  for (let k = 0; k < 2; k++) {
+    const p = ((t * 0.18 + k * 0.5) % 1); const rr = h.r * (0.75 + p * 0.9);
+    ctx.strokeStyle = `rgba(255,225,150,${0.22 * (1 - p) * w * I})`; ctx.lineWidth = 3 + 6 * (1 - p);
+    ctx.beginPath(); ctx.arc(h.x, h.y, rr, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawGlow(x, y, r, col, a) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(0.4, `rgba(${col},${a * 0.45})`); g.addColorStop(1, `rgba(${col},0)`);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+}
+function drawBgEffects() {
+  if (!fxOn()) return;
+  const I = (cfg.effects && cfg.effects.intensity) || 1;
+  for (const [d, w] of bgWeights()) {
+    if (w <= 0.01) continue;
+    if (d.halo) drawHalo(d.halo, w, I);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    (d.glows || []).forEach((gl, i) => { const ph = gl.twinkle ? Math.max(0, Math.sin(now * 1.7 + i * 2.39)) : 0.6 + 0.4 * Math.sin(now * 2.2 + i); drawGlow(gl.x, gl.y, gl.r * (0.85 + 0.25 * ph), gl.c || '255,230,150', (gl.twinkle ? 0.35 : 0.55) * ph * w * I); });
+    (d.lanterns || []).forEach((p, i) => { const f = 0.75 + 0.25 * Math.sin(now * 7 + i * 1.3) * Math.sin(now * 3.1 + i); const sc = Math.max(0.5, (p[1] - 650) / 350); drawGlow(p[0], p[1], 34 * sc * f, '255,190,90', 0.45 * w * I * f); });
+    if (d.door) { const f = 0.8 + 0.2 * Math.sin(now * 1.5); drawGlow(d.door[0], d.door[1], 60 * f, '255,214,140', 0.5 * w * I); }
+    ctx.restore();
+  }
+}
+// đốm sáng lơ lửng lấp lánh
+function newMote(init) {
+  const top = Math.random() < 0.6; // nhiều đốm ở nửa trên quanh hình Phật
+  return { x: Math.random() * W, y: init ? Math.random() * H : (top ? Math.random() * 700 : H + 10), vy: -(4 + Math.random() * 14), sw: 10 + Math.random() * 30, ph: Math.random() * 6.28, fr: 0.4 + Math.random() * 1.2,
+    r: 0.8 + Math.random() * 2.4, life: 0, max: 6 + Math.random() * 10, star: Math.random() < 0.18, hue: 38 + Math.random() * 20, front: Math.random() < 0.3 };
+}
+function updateMotes(dt) {
+  if (!fxOn()) { motes.length = 0; return; }
+  const target = Math.round(((cfg.effects && cfg.effects.motes) ?? 110));
+  while (motes.length < target) motes.push(newMote(motes.length < target * 0.9 && now < 2));
+  if (motes.length > target) motes.length = target;
+  for (let i = 0; i < motes.length; i++) { const m = motes[i]; m.life += dt; m.y += m.vy * dt; if (m.life > m.max || m.y < -20) motes[i] = newMote(false); }
+}
+function drawMotes(front) {
+  if (!fxOn()) return;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const m of motes) {
+    if (m.front !== front) continue;
+    const fade = Math.min(1, m.life / 1.2, (m.max - m.life) / 1.5);
+    const tw = 0.5 + 0.5 * Math.sin(now * m.fr * 4 + m.ph);
+    const a = Math.max(0, fade * (0.35 + 0.65 * tw));
+    const x = m.x + Math.sin(now * m.fr + m.ph) * m.sw * 0.3, y = m.y;
+    const r = m.r * (front ? 1.4 : 1);
+    drawGlow(x, y, r * 5, `255,${200 + (m.hue | 0)},150`, 0.35 * a);
+    ctx.fillStyle = `rgba(255,250,225,${a})`; ctx.beginPath(); ctx.arc(x, y, r * 0.8, 0, Math.PI * 2); ctx.fill();
+    if (m.star && tw > 0.6) { // tia lấp lánh hình chữ thập
+      const L = r * 7 * tw; ctx.strokeStyle = `rgba(255,245,210,${a * 0.8})`; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(x - L, y); ctx.lineTo(x + L, y); ctx.moveTo(x, y - L); ctx.lineTo(x, y + L); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
 const cloud = document.createElement('canvas'); cloud.width = W; cloud.height = 240; const cx2 = cloud.getContext('2d');
-const CLOUD_TOP = 1060;
 function drawCloudCover() {
   if (!vbufReady) return;
   cx2.globalCompositeOperation = 'source-over'; cx2.clearRect(0, 0, W, 240);
@@ -505,10 +603,14 @@ function render(dt) {
   ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (haveVideo) ctx.drawImage(vbuf, 0, 0, W, H);
+  updateMotes(dt);
+  drawBgEffects();
+  drawMotes(false);
   const sorted = chars.slice().sort((a, b) => a.y - b.y);
   for (const c of sorted) drawChar(c);
   drawCloudCover();
   drawParticles();
+  drawMotes(true);
   for (const c of sorted) drawName(c);
   drawFloats(dt);
   ctx.restore();

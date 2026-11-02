@@ -155,12 +155,11 @@ function listMusic() {
   for (const f of fs.readdirSync(DIRS.music)) if (AUDIO_EXT.test(f)) out.push({ id: 'user:' + f, name: f, url: fileURL(path.join(DIRS.music, f)), source: 'user' });
   return out;
 }
-function listVideos() {
+function listVideos() { // ảnh / video nền
   const out = [];
-  const vd = path.join(APP, 'assets', 'video');
-  const b = readJSON(path.join(vd, 'videos.json'), [{ file: 'bg.mp4', name: 'Video nền' }]);
-  b.forEach(v => { if (fs.existsSync(path.join(vd, v.file))) out.push({ id: 'bundled:' + v.file, name: v.name || v.file, url: fileURL(path.join(vd, v.file)), source: 'bundled' }); });
-  try { for (const f of fs.readdirSync(DIRS.videos)) if (/\.(mp4|webm|mov|m4v)$/i.test(f)) out.push({ id: 'user:' + f, name: f, url: fileURL(path.join(DIRS.videos, f)), source: 'user' }); } catch {}
+  const bd = path.join(APP, 'assets', 'bg');
+  readJSON(path.join(bd, 'backgrounds.json'), []).forEach(v => { if (fs.existsSync(path.join(bd, v.file))) out.push({ ...v, id: 'bundled:' + v.file, url: fileURL(path.join(bd, v.file)), source: 'bundled', type: 'image' }); });
+  try { for (const f of fs.readdirSync(DIRS.videos)) { const isImg = /\.(png|jpe?g|webp)$/i.test(f), isVid = /\.(mp4|webm|mov|m4v)$/i.test(f); if (isImg || isVid) out.push({ id: 'user:' + f, name: f, url: fileURL(path.join(DIRS.videos, f)), source: 'user', type: isImg ? 'image' : 'video' }); } } catch {}
   return out;
 }
 function initData() {

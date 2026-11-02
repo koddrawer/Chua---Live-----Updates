@@ -1,4 +1,4 @@
 {
-  "version": "1.0.15",
-  "notes": "Kết nối TikTok: chờ lâu dần khi lỗi, xử lý giới hạn lượt kết nối của Euler Stream, ô API key đưa ra ngoài"
+  "version": "1.0.16",
+  "notes": "Thay 3 video nền bằng 3 ảnh tĩnh mới (Đức Phật, Quan Âm, La Hán) + hào quang toả sáng, đèn lồng lung linh, đốm sáng lơ lửng; chỉnh lại bậc thang theo ảnh mới"
 }

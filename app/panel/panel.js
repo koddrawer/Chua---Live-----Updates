@@ -304,7 +304,7 @@ function renderVideos() {
     box.appendChild(el);
   }
 }
-$('#btnAddVideo').onclick = async () => { const f = await window.api.openDialog({ multi: true, filters: [{ name: 'Video', extensions: ['mp4', 'webm', 'mov', 'm4v'] }] }); if (f.length) await window.api.addVideo(f.map(x => x.path)); };
+$('#btnAddVideo').onclick = async () => { const f = await window.api.openDialog({ multi: true, filters: [{ name: 'Ảnh / Video', extensions: ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'webm', 'mov', 'm4v'] }] }); if (f.length) await window.api.addVideo(f.map(x => x.path)); };
 $('#btnNextBg').onclick = () => window.api.stageCmd({ type: 'bg-next' });
 
 $('#btnGalleryClear').onclick = () => window.api.stageCmd({ type: 'gallery-clear' });
