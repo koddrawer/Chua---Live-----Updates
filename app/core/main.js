@@ -188,7 +188,7 @@ async function tiktokConnect(username, opts = {}) {
   patchConfig({ tiktok: { username } });
   if (!tk.lib) tk.lib = await importLib('tiktok-live-connector');
   const { TikTokLiveConnection, WebcastEvent, ControlEvent } = tk.lib;
-  const options = { processInitialData: false, enableExtendedGiftInfo: true, fetchRoomInfoOnConnect: false };
+  const options = { processInitialData: false, enableExtendedGiftInfo: false, fetchRoomInfoOnConnect: false };
   if (config.tiktok.signApiKey) options.signApiKey = config.tiktok.signApiKey;
   const conn = new TikTokLiveConnection(username, options);
   tk.conn = conn;

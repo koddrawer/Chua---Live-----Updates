@@ -1,4 +1,4 @@
 {
-  "version": "1.0.7",
-  "notes": "Sửa kết nối TikTok: bỏ khoảng trắng trong ID, tự tìm Room ID, ô nhập Room ID, ghi lỗi chi tiết"
+  "version": "1.0.8",
+  "notes": "Sửa kết nối: bỏ tải danh sách quà (cần gói trả phí Euler), lấy giá xu từ sự kiện quà"
 }
