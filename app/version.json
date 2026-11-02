@@ -1,4 +1,4 @@
 {
-  "version": "1.0.14",
-  "notes": "Avatar + khung người donate bay lên treo lơ lửng hai bên Đức Phật (mức càng cao càng to, hết chỗ thì người treo lâu nhất tan biến)"
+  "version": "1.0.15",
+  "notes": "Kết nối TikTok: chờ lâu dần khi lỗi, xử lý giới hạn lượt kết nối của Euler Stream, ô API key đưa ra ngoài"
 }

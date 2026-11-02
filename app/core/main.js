@@ -203,6 +203,7 @@ async function tiktokConnect(username, opts = {}) {
   if (!username) throw new Error('Chưa nhập tên tài khoản TikTok');
   if (/\s/.test(raw.replace(/^https?:\S+/, ''))) log('Tên TikTok không có khoảng trắng — đã dùng "@' + username + '". Hãy nhập đúng ID (tên sau dấu @ trên trang cá nhân), không phải tên hiển thị.', 'warn');
   await tiktokDisconnect(false);
+  if (opts.manual) tk.fails = 0;
   tk.wanted = true; tk.username = username;
   patchConfig({ tiktok: { username } });
   if (!tk.lib) tk.lib = await importLib('tiktok-live-connector');
@@ -244,14 +245,19 @@ async function tiktokConnect(username, opts = {}) {
     const state = await conn.connect(rid || undefined);
     if (tk.conn !== conn) return;
     tk.roomId = state?.roomId || conn.roomId || null;
+    tk.fails = 0;
     setTkStatus('connected'); log('Đã kết nối LIVE @' + username + (tk.roomId ? ' (room ' + tk.roomId + ')' : ''), 'ok');
   } catch (e) {
     if (tk.conn !== conn) return;
     const msg = e?.message || String(e);
     const detail = [].concat(e?.errors || [], e?.cause || []).map(x => x?.message || String(x)).filter(Boolean).slice(0, 4);
     setTkStatus('error', msg); log('Không kết nối được: ' + msg + (detail.length ? '\n  • ' + detail.join('\n  • ') : ''), 'error');
+    const rate = /rate.?limit/i.test(msg);
+    if (rate) log(config.tiktok.signApiKey
+      ? 'Đã hết lượt kết nối theo giờ của API key Euler Stream. App sẽ tự thử lại sau ít phút. Nếu hay gặp, nâng gói ở eulerstream.com.'
+      : 'Máy chủ ký kết nối (Euler Stream) giới hạn số lần kết nối mỗi giờ khi KHÔNG có API key. Cách sửa: vào eulerstream.com → đăng ký miễn phí → tạo API key → dán vào ô "Euler Stream API key" ở tab Kết nối LIVE. App sẽ tự thử lại sau 10 phút.', 'warn');
     if (/Room ID/i.test(msg)) log('Gợi ý: (1) kiểm tra đúng ID TikTok (sau dấu @, không dấu cách) và tài khoản ĐANG LIVE; (2) nhập Room ID ở mục Nâng cao; (3) nhập Euler Stream API key (miễn phí tại eulerstream.com) ở mục Nâng cao.', 'warn');
-    if (tk.wanted) scheduleRetry();
+    if (tk.wanted) scheduleRetry(rate ? 'rate' : '');
   }
 }
 // Tự tìm Room ID bằng trình duyệt nội bộ của Electron (dùng proxy/cookie hệ thống) — ổn định hơn cách của thư viện
@@ -264,10 +270,14 @@ async function findRoomId(user) {
   for (const t of tries) { try { const id = await Promise.race([t(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))]); if (id && String(id) !== '0') return String(id); } catch (e) { console.log('findRoomId', e.message); } }
   return '';
 }
-function scheduleRetry() {
+function scheduleRetry(kind) {
   clearTimeout(tk.retryTimer);
-  const s = Math.max(5, config.tiktok.retrySeconds || 15);
-  log('Thử kết nối lại sau ' + s + ' giây...');
+  tk.fails = (tk.fails || 0) + 1;
+  let s = Math.max(5, config.tiktok.retrySeconds || 15) * Math.pow(2, Math.min(5, tk.fails - 1)); // 15, 30, 60, 120, 240...
+  if (kind === 'rate') s = Math.max(s, 600); // bị giới hạn lượt ký -> chờ lâu, thử liên tục chỉ làm hết lượt
+  s = Math.min(s, kind === 'rate' ? 1800 : 300);
+  log('Thử kết nối lại sau ' + (s >= 60 ? Math.round(s / 60) + ' phút' : s + ' giây') + '...');
+  tk.retryAt = Date.now() + s * 1000;
   tk.retryTimer = setTimeout(() => { if (tk.wanted) tiktokConnect(tk.username).catch(e => log(e.message, 'error')); }, s * 1000);
 }
 async function tiktokDisconnect(userAction = true) {
@@ -457,10 +467,16 @@ async function startupUpdate() {
 // ---------------- IPC ----------------
 ipcMain.handle('init', () => initData());
 ipcMain.handle('config:patch', (_e, patch) => { patchConfig(patch); return config; });
-ipcMain.handle('config:set', (_e, key, value) => { setConfigKey(key, value); return config; });
+ipcMain.handle('config:set', async (_e, key, value) => {
+  if (key === 'tiktok.signApiKey' && tk.lib && value !== config.tiktok.signApiKey) {
+    setConfigKey(key, value); writeJSON(CONFIG_PATH, config);
+    const r = await dialog.showMessageBox(panelWin, { type: 'question', buttons: ['Khởi động lại ngay', 'Để sau'], defaultId: 0, title: 'Chùa Live', message: 'Cần khởi động lại app để dùng API key mới. Khởi động lại ngay?' });
+    if (r.response === 0) relaunch();
+    return config;
+  } setConfigKey(key, value); return config; });
 ipcMain.handle('config:reset', (_e, section) => { const v = section && section.split('.').reduce((a, k) => a == null ? a : a[k], DEFAULTS); if (v !== undefined) setConfigKey(section, JSON.parse(JSON.stringify(v))); return config; });
 ipcMain.handle('content:default', () => loadContent());
-ipcMain.handle('tiktok:connect', async (_e, u) => { await tiktokConnect(u); return tiktokState(); });
+ipcMain.handle('tiktok:connect', async (_e, u) => { await tiktokConnect(u, { manual: true }); return tiktokState(); });
 ipcMain.handle('tiktok:disconnect', async () => { await tiktokDisconnect(true); return tiktokState(); });
 ipcMain.handle('tts', async (_e, text, o) => { try { return await tts(text, o); } catch (e) { return { error: e.message }; } });
 ipcMain.handle('tts:test', async (_e, engine) => {
