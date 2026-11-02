@@ -136,7 +136,7 @@ function pickImg(img) { if (!img) return ''; const u = img.url || img.urlList ||
 function normUser(u) {
   u = u || {};
   return {
-    id: String(u.userId || u.uniqueId || u.id || ''),
+    id: String(u.userId || u.uniqueId || u.id || u.displayId || u.nickname || ''),
     uniqueId: u.uniqueId || u.displayId || '',
     nickname: (u.nickname || u.uniqueId || 'Phật tử').trim(),
     avatar: pickImg(u.profilePictureMedium) || pickImg(u.profilePicture) || pickImg(u.profilePictureLarge) || u.profilePictureUrl || '',
@@ -434,6 +434,11 @@ ipcMain.handle('app:relaunch', () => relaunch());
 
 // ---------------- Start ----------------
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// Không cho Windows/Chromium tạm dừng màn hình LIVE khi bị cửa sổ khác (TikTok LIVE Studio, OBS) che hoặc thu nhỏ
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.whenReady().then(async () => {
   if (await startupUpdate()) return;
   createPanel();

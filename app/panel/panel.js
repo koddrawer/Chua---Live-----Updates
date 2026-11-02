@@ -380,7 +380,7 @@ function renderAll() { fillInputs(); renderChars(); renderTiers(); renderFrames(
   window.api.on('update-state', r => { if (r.newer) $('#updMsg').textContent = `Có bản mới ${r.remote} — bấm “Cập nhật & khởi động lại”.`; });
   window.api.on('update-progress', p => { $('#updMsg').textContent = p.msg; });
   window.api.on('stage-state', s => { if (!s.open) $('#stats').textContent = 'Màn hình LIVE đang đóng'; });
-  window.api.on('stage-report', r => { $('#stats').textContent = `Nhân vật: ${r.onScreen} (người xem ${r.viewers}) · chờ: ${r.queue} · donate chờ: ${r.donorQueue} · ${r.fps} fps${r.speaking ? ' · 🔊 đang cảm ơn' : ''}`; });
+  window.api.on('stage-report', r => { $('#stats').textContent = `Nhân vật: ${r.onScreen} (người xem ${r.viewers}) · chờ: ${r.queue} · donate chờ: ${r.donorQueue} · ${r.fps} fps${r.speaking ? ' · 🔊 đang cảm ơn' : ''}${r.stats ? ` · nhận: ${r.stats.joins} vào / ${r.stats.chats} bình luận / ${r.stats.likes} tim · đã đưa lên: ${r.stats.spawned}` : ''}`; });
   window.api.on('live-event', ev => {
     if (ev.type === 'join') lastJoined = ev.user;
     if (ev.type === 'gift') addLog({ msg: `🎁 ${ev.user.nickname} tặng ${ev.repeat > 1 ? ev.repeat + '× ' : ''}${ev.giftName} (${ev.coins} xu)`, level: 'ok' });

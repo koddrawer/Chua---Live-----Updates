@@ -371,22 +371,32 @@ function updateCam(dt) {
 
 // ---------------- Vòng lặp ----------------
 let lastT = performance.now(), fpsAcc = 0, fpsN = 0, fps = 60;
+let lastFrameAt = performance.now();
 function frame(t) {
+  lastFrameAt = performance.now();
   const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t; now += dt;
   fpsAcc += dt; fpsN++; if (fpsAcc > 1) { fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
   if (cfg && Object.keys(packs).length) tick(dt);
   render(dt);
   requestAnimationFrame(frame);
 }
+// nếu cửa sổ bị che/thu nhỏ khiến requestAnimationFrame dừng, vẫn chạy logic bằng bộ hẹn giờ
+setInterval(() => { const t = performance.now(); if (t - lastFrameAt > 120) { const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t; now += dt; if (cfg && Object.keys(packs).length) tick(dt); } }, 33);
 function tick(dt) {
   const s = cfg.scene;
-  // sinh nhân vật cho người xem đang chờ
-  if (joinQueue.length && now - lastSpawn >= s.spawnInterval) {
-    const active = chars.filter(c => !c.removing);
-    if (active.length >= s.maxCharacters) { const idle = active.find(c => c.kind === 'idle'); if (idle) vanish(idle); }
-    if (active.filter(c => !c.removing).length < s.maxCharacters + 2) {
+  // sinh nhân vật cho người xem đang chờ (hàng chờ dài thì sinh nhanh hơn)
+  const interval = s.spawnInterval / (1 + joinQueue.length / 8);
+  if (joinQueue.length && now - lastSpawn >= interval) {
+    let active = chars.filter(c => !c.removing);
+    if (active.length >= s.maxCharacters) {
+      // nhường chỗ: người tự do trước, rồi người xem đã hết thời gian hiện tên / đi lâu nhất
+      const victim = active.find(c => c.kind === 'idle') || active.filter(c => c.kind === 'viewer' && !c.auraOn && c.mode !== 'action').sort((a, b) => a.born - b.born)[0];
+      if (victim) { blessText(victim); vanish(victim); }
+      active = chars.filter(c => !c.removing);
+    }
+    if (active.length < s.maxCharacters + 3) {
       const u = joinQueue.shift();
-      if (!byUser.has(u.id)) spawn({ kind: 'viewer', user: u });
+      if (!byUser.has(u.id) && spawn({ kind: 'viewer', user: u })) stats.spawned++;
       lastSpawn = now;
     }
   }
@@ -443,7 +453,9 @@ function welcome(u) {
   while (list.children.length > (cfg.layout.welcome.max || 6)) list.lastElementChild.remove();
   if (u.avatar) window.api.avatar(u.avatar).then(d => { if (d) { const im = document.createElement('img'); im.src = d; ph.replaceWith(im); } });
 }
+const stats = { joins: 0, chats: 0, likes: 0, gifts: 0, spawned: 0, dropped: 0, noId: 0 };
 function onJoin(u, src) {
+  if (!u || !u.id) { stats.noId++; return; }
   if (!u || !u.id) return;
   const s = cfg.scene;
   const last = recentJoin.get(u.id);
@@ -454,7 +466,7 @@ function onJoin(u, src) {
   if (src === 'join') welcome(u);
   if (joinQueue.find(q => q.id === u.id)) return;
   joinQueue.push(u);
-  if (joinQueue.length > 80) joinQueue.splice(0, joinQueue.length - 80);
+  if (joinQueue.length > 300) { stats.dropped += joinQueue.length - 300; joinQueue.splice(0, joinQueue.length - 300); }
   if (src === 'join') { AudioMgr.sfx('chime'); if (cfg.voice.greetEnabled) AudioMgr.say(fill(cfg.voice.greetTemplate, { name: voiceName(u.nickname) }), { low: true }); }
 }
 function tierFor(coins) { const ts = (cfg.tiers || []).slice().sort((a, b) => a.min - b.min); let t = ts[0]; for (const x of ts) if (coins >= x.min) t = x; return t; }
@@ -680,6 +692,7 @@ async function main() {
   window.api.on('assets', async a => { charList = a.characters; frameList = a.frames; musicList = a.music; await loadPacks(); applyAll(false); });
   window.api.on('live-event', ev => {
     try {
+      stats[ev.type === 'join' ? 'joins' : ev.type === 'chat' ? 'chats' : ev.type === 'gift' ? 'gifts' : 'likes']++;
       if (ev.type === 'join') onJoin(ev.user, 'join');
       else if (ev.type === 'chat' && cfg.scene.joinOnChat) onJoin(ev.user, 'chat');
       else if ((ev.type === 'like' || ev.type === 'follow' || ev.type === 'share') && cfg.scene.joinOnLike) onJoin(ev.user, 'like');
@@ -698,7 +711,7 @@ async function main() {
     else if (cmd.type === 'zoom-test') { const c = chars.find(x => !x.removing); if (c) camFocus(c); }
   });
   setInterval(() => {
-    window.api.report({ onScreen: chars.length, viewers: chars.filter(c => c.user).length, queue: joinQueue.length, donorQueue: donorQueue.length + (donorBusy ? 1 : 0), fps, sermon: AudioMgr.sermonState(), speaking: AudioMgr.speaking(), packs: Object.keys(packs).length });
+    window.api.report({ stats, onScreen: chars.length, viewers: chars.filter(c => c.user).length, queue: joinQueue.length, donorQueue: donorQueue.length + (donorBusy ? 1 : 0), fps, sermon: AudioMgr.sermonState(), speaking: AudioMgr.speaking(), packs: Object.keys(packs).length });
   }, 1000);
   requestAnimationFrame(frame);
 }

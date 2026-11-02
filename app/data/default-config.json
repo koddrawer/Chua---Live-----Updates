@@ -27,7 +27,7 @@
     "bowSeconds": 1.3,
     "charScale": 1.0,
     "maxCharacters": 45,
-    "spawnInterval": 0.8,
+    "spawnInterval": 0.6,
     "idleCount": 6,
     "idleSpawnSeconds": 3.5,
     "idleWhenViewers": 2,
@@ -44,7 +44,7 @@
     "cardSeconds": 8,
     "joinOnChat": true,
     "joinOnLike": true,
-    "rejoinCooldown": 60,
+    "rejoinCooldown": 20,
     "videoRate": 1.0
   },
   "characters": {

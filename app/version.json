@@ -1,4 +1,4 @@
 {
-  "version": "1.0.2",
-  "notes": "Trỏ cập nhật nóng về repo Chua---Live-----Updates; tuỳ chỉnh thẻ donate, ô quẻ, độ trong suốt bảng chữ; giọng cảm ơn/quẻ có dự phòng Google"
+  "version": "1.0.3",
+  "notes": "Sửa: màn hình LIVE không bị dừng khi bị LIVE Studio/OBS che; hàng chờ người vào xử lý nhanh hơn, tự nhường chỗ khi đầy; thống kê sự kiện TikTok trên bảng điều khiển"
 }
