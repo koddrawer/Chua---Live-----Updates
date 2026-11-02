@@ -1,4 +1,4 @@
 {
-  "version": "1.0.10",
-  "notes": "Sửa avatar không hiện ở bảng chào mừng & thẻ donate (thử nhiều link ảnh, bỏ ảnh HEIC, tải trực tiếp khi cần)"
+  "version": "1.0.11",
+  "notes": "Sửa nháy đen màn hình khi video nền lặp lại (đệm khung hình); chống tải lại liên tục khi lỗi đồ hoạ"
 }

@@ -330,12 +330,22 @@ function drawParticles() {
   ctx.restore();
 }
 // mây che phía dưới: vẽ lại phần mây của video lên trên nhân vật với dải trong suốt
+// Bộ đệm khung hình video: khi video tua lại vòng lặp / chờ dữ liệu thì vẫn vẽ khung gần nhất -> không nháy đen
+const vbuf = document.createElement('canvas'); vbuf.width = W; vbuf.height = H; const vbx = vbuf.getContext('2d');
+let vbufReady = false, vbufTime = -1;
+function updateVideoBuffer() {
+  if (video.readyState >= 2 && !video.seeking && video.videoWidth) {
+    const t = video.currentTime;
+    if (t !== vbufTime || !vbufReady) { vbx.drawImage(video, 0, 0, W, H); vbufTime = t; vbufReady = true; }
+  }
+  return vbufReady;
+}
 const cloud = document.createElement('canvas'); cloud.width = W; cloud.height = 240; const cx2 = cloud.getContext('2d');
 const CLOUD_TOP = 1060;
 function drawCloudCover() {
-  if (video.readyState < 2) return;
+  if (!vbufReady) return;
   cx2.globalCompositeOperation = 'source-over'; cx2.clearRect(0, 0, W, 240);
-  cx2.drawImage(video, 0, CLOUD_TOP, W, 220, 0, 0, W, 220);
+  cx2.drawImage(vbuf, 0, CLOUD_TOP, W, 220, 0, 0, W, 220);
   cx2.globalCompositeOperation = 'destination-in';
   const g = cx2.createLinearGradient(0, 0, 0, 220);
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.45, 'rgba(0,0,0,0)'); g.addColorStop(0.75, 'rgba(0,0,0,.75)'); g.addColorStop(1, 'rgba(0,0,0,1)');
@@ -418,15 +428,16 @@ function render(dt) {
   updateCam(dt);
   const k = scale * dpr;
   // khung ngang (16:9): hai bên lấp bằng video nền phóng to + làm mờ, cảnh 9:16 ở giữa
-  if ((offX > 2 || offY > 2) && video.readyState >= 2) {
+  const haveVideo = updateVideoBuffer();
+  if ((offX > 2 || offY > 2) && haveVideo) {
     const cw = canvas.width, ch = canvas.height, s2 = Math.max(cw / W, ch / H);
     ctx.save(); ctx.filter = 'blur(' + Math.round(18 * dpr) + 'px) brightness(0.55) saturate(1.2)';
-    ctx.drawImage(video, (cw - W * s2) / 2, (ch - H * s2) / 2, W * s2, H * s2); ctx.restore();
+    ctx.drawImage(vbuf, (cw - W * s2) / 2, (ch - H * s2) / 2, W * s2, H * s2); ctx.restore();
   }
   ctx.setTransform(k * cam.z, 0, 0, k * cam.z, offX * dpr + k * (W / 2 - cam.x * cam.z), offY * dpr + k * (H / 2 - cam.y * cam.z));
   ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  if (video.readyState >= 2) ctx.drawImage(video, 0, 0, W, H);
+  if (haveVideo) ctx.drawImage(vbuf, 0, 0, W, H);
   const sorted = chars.slice().sort((a, b) => a.y - b.y);
   for (const c of sorted) drawChar(c);
   drawCloudCover();

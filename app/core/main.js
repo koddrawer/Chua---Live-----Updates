@@ -76,6 +76,8 @@ const CRASH_LOG = path.join(USER, 'crash.log');
 function crash(msg) { const line = new Date().toISOString() + '  ' + msg; try { fs.appendFileSync(CRASH_LOG, line + '\n'); } catch {} log(msg, 'error'); }
 function guardWindow(win, name) {
   win.webContents.on('render-process-gone', (_e, d) => {
+    const nowT = Date.now(); win._crashes = (win._crashes || []).filter(t => nowT - t < 60000); win._crashes.push(nowT);
+    if (win._crashes.length > 3) { crash(`Cửa sổ ${name} lỗi liên tục — dừng tự tải lại. Hãy bật "Tắt tăng tốc đồ hoạ" (tab Kết nối LIVE) rồi mở lại app.`); return; }
     crash(`Cửa sổ ${name} bị lỗi (${d.reason}, code ${d.exitCode}) — tự tải lại`);
     setTimeout(() => { if (!win.isDestroyed()) win.reload(); }, 800);
   });
