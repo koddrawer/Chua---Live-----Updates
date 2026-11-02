@@ -2,7 +2,7 @@
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 let cfg = null, D = null, lastJoined = null;
 const STATES = [
-  ['walk_left', 'Đi ngang (sang trái/phải)'], ['walk_up', 'Đi lên bậc thang (lưng)'], ['walk_down', 'Đi về phía trước (mặt)'],
+  ['walk_up', 'Đi lên bậc thang (lưng)'], ['walk_down', 'Đi về phía trước (mặt)'],
   ['bow', 'Cúi chào Phật'], ['bow_front', 'Chắp tay vái (mặt)'], ['kneel', 'Quỳ'], ['prostrate', 'Vái lạy (quỳ cúi rạp)'], ['skip', '— bỏ khung này —'],
 ];
 const VOICES = [['vi-VN-HoaiMyNeural', 'Hoài My (nữ, Việt)'], ['vi-VN-NamMinhNeural', 'Nam Minh (nam, Việt)']];
@@ -93,7 +93,7 @@ function renderChars() {
     const disabled = (cfg.characters.disabled || []).includes(c.id);
     const el = document.createElement('div'); el.className = 'citem';
     const anims = c.json.animations;
-    const thumbs = Object.entries(anims).map(([k, a]) => (a.frames || []).slice(0, 4).map(f => `<figure><img src="${c.base + encodeURIComponent(f)}"${a.flip ? ' style="transform:scaleX(-1)"' : ''}><figcaption>${esc(k)}</figcaption></figure>`).join('')).join('');
+    const thumbs = Object.entries(anims).filter(([k]) => k !== 'walk_left' && k !== 'walk_right').map(([k, a]) => (a.frames || []).slice(0, 4).map(f => `<figure><img src="${c.base + encodeURIComponent(f)}"${a.flip ? ' style="transform:scaleX(-1)"' : ''}><figcaption>${esc(k)}</figcaption></figure>`).join('')).join('');
     el.innerHTML = `<div class="meta"><b>${esc(c.json.name || c.folder)}</b><div class="muted small">${c.source === 'bundled' ? 'Có sẵn' : 'Tự thêm'} · ${Object.keys(c.json.frames || {}).length} khung</div>
       <label class="chk"><input type="checkbox" class="en" ${disabled ? '' : 'checked'}> Sử dụng</label>
       <label>Trọng số <input type="number" class="wt" min="0" step="0.5" value="${(cfg.characters.weights || {})[c.id] ?? 1}"></label>
@@ -124,16 +124,14 @@ async function openSlicer(existing) {
       <label>Cách cắt<select id="sMode"><option value="auto">Tự động (theo khoảng trống)</option><option value="std">Chuẩn: hàng trên 6 khung</option><option value="grid">Lưới hàng × cột</option><option value="single">Mỗi ảnh = 1 khung</option></select></label>
       <label>Hàng<input id="sRows" type="number" value="2" style="width:70px"></label><label>Cột<input id="sCols" type="number" value="6" style="width:70px"></label>
       <button id="sRedo">Cắt lại</button>
-      <label class="chk"><input type="checkbox" id="sFaceLeft" checked> Ảnh đi ngang đang quay mặt sang TRÁI</label>
-      <label>FPS đi ngang<input id="sFps" type="number" value="6" style="width:70px"></label>
       ${existing ? '<label class="chk"><input type="checkbox" id="sReplace" checked> Thay thế hoạt ảnh cũ của trạng thái được gán</label>' : ''}
     </div>
     <div id="sFrames" class="sframes"></div>
-    <div class="row" style="margin-top:14px"><canvas id="sPrev" class="prevcv" width="260" height="300"></canvas><div class="muted small" style="max-width:420px">Xem trước: đi lên → cúi chào → đi ngang → quỳ → vái lạy. Chọn trạng thái cho từng khung ở trên. Các khung cùng trạng thái chạy nối tiếp theo thứ tự.</div></div>
+    <div class="row" style="margin-top:14px"><canvas id="sPrev" class="prevcv" width="260" height="300"></canvas><div class="muted small" style="max-width:420px">Xem trước: đi lên → cúi chào → quỳ → vái lạy. Chọn trạng thái cho từng khung ở trên. Các khung cùng trạng thái chạy nối tiếp theo thứ tự.</div></div>
     <div class="row"><button id="sSave" class="primary">Lưu</button><span id="sMsg" class="muted"></span></div>`);
   const defaultStates = n => {
-    if (n === 11) return ['walk_left', 'walk_left', 'walk_left', 'walk_left', 'walk_down', 'walk_down', 'walk_up', 'walk_up', 'bow', 'kneel', 'prostrate'];
-    if (n === 12) return ['walk_left', 'walk_left', 'walk_left', 'walk_left', 'walk_down', 'walk_down', 'walk_up', 'walk_up', 'bow_front', 'bow', 'kneel', 'prostrate'];
+    if (n === 11) return ['skip', 'skip', 'skip', 'skip', 'walk_down', 'walk_down', 'walk_up', 'walk_up', 'bow', 'kneel', 'prostrate'];
+    if (n === 12) return ['skip', 'skip', 'skip', 'skip', 'walk_down', 'walk_down', 'walk_up', 'walk_up', 'bow_front', 'bow', 'kneel', 'prostrate'];
     return Array(n).fill(existing ? 'skip' : 'walk_up');
   };
   const cut = () => {
@@ -165,15 +163,15 @@ async function openSlicer(existing) {
     if (!document.body.contains(pc)) return clearInterval(prevTimer);
     pt += 1 / 12; px.clearRect(0, 0, pc.width, pc.height);
     const by = s => frames.filter(f => f.state === s);
-    const seq = [['walk_up', 3, 2], ['bow', 1.2, 1], ['walk_left', 2, 6], ['kneel', 1, 1], ['prostrate', 1.2, 1], ['kneel', 0.8, 1]];
+    const seq = [['walk_up', 3, 2], ['bow', 1.2, 1], ['kneel', 1, 1], ['prostrate', 1.2, 1], ['kneel', 0.8, 1]];
     const tot = seq.reduce((a, s) => a + s[1], 0); let t = pt % tot, cur = seq[0];
     for (const s of seq) { if (t < s[1]) { cur = s; break; } t -= s[1]; }
     const list = by(cur[0]).length ? by(cur[0]) : by('walk_up'); if (!list.length) return;
-    const fps = cur[0] === 'walk_left' ? (+$('#sFps').value || 6) : cur[2];
+    const fps = cur[2];
     const f = list[Math.floor(t * fps) % list.length];
     const ref = Math.max(...(by('walk_up').length ? by('walk_up') : frames).map(x => x.h));
     const k = 270 / ref, dw = f.w * k, dh = f.h * k;
-    const flip = cur[0] === 'walk_left' && !$('#sFaceLeft').checked;
+    const flip = false;
     px.save(); if (flip) { px.translate(pc.width, 0); px.scale(-1, 1); }
     px.drawImage(f.canvas, pc.width / 2 - dw / 2, 290 - dh, dw, dh); px.restore();
     px.fillStyle = '#f2c46d'; px.font = '12px sans-serif'; px.fillText(cur[0], 8, 16);
@@ -191,7 +189,7 @@ async function openSlicer(existing) {
       fmeta[name] = { w: f.w, h: f.h, ax: Math.round(Slicer.anchor(f.canvas, walk) * 10) / 10, ay: f.h };
       (anim[f.state] = anim[f.state] || []).push(name);
     });
-    const faceLeft = $('#sFaceLeft').checked, fps = +$('#sFps').value || 6;
+    const faceLeft = true, fps = 6;
     const animations = {};
     for (const [st, fr] of Object.entries(anim)) {
       if (st === 'walk_left') { animations.walk_left = { frames: fr, fps, flip: !faceLeft }; animations.walk_right = { frames: fr, fps, flip: faceLeft }; }

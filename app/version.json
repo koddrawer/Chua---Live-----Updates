@@ -1,4 +1,4 @@
 {
-  "version": "1.0.3",
-  "notes": "Sửa: màn hình LIVE không bị dừng khi bị LIVE Studio/OBS che; hàng chờ người vào xử lý nhanh hơn, tự nhường chỗ khi đầy; thống kê sự kiện TikTok trên bảng điều khiển"
+  "version": "1.0.4",
+  "notes": "Bỏ trạng thái đi sang trái/phải; ghi crash.log + tự tải lại cửa sổ khi lỗi; tuỳ chọn tắt tăng tốc đồ hoạ"
 }

@@ -206,6 +206,7 @@ function updateChar(c, dt) {
   }
 }
 function maybeSide(c) {
+  return; // đã bỏ trạng thái đi sang trái / phải
   if (Math.random() > cfg.scene.sideWalkChance || c.y < 760) return;
   let target = c.u + (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.35);
   if (target > 0.72 || target < -0.72) target = c.u - (target - c.u);

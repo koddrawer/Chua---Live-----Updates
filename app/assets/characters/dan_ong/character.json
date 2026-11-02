@@ -76,26 +76,6 @@
   }
  },
  "animations": {
-  "walk_left": {
-   "frames": [
-    "walk_side_0.png",
-    "walk_side_1.png",
-    "walk_side_2.png",
-    "walk_side_3.png"
-   ],
-   "fps": 6,
-   "flip": false
-  },
-  "walk_right": {
-   "frames": [
-    "walk_side_0.png",
-    "walk_side_1.png",
-    "walk_side_2.png",
-    "walk_side_3.png"
-   ],
-   "fps": 6,
-   "flip": true
-  },
   "walk_up": {
    "frames": [
     "walk_back_0.png",

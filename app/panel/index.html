@@ -51,6 +51,7 @@
       <label class="chk"><input type="checkbox" id="optTop"> Luôn nằm trên cùng</label>
       <label class="chk"><input type="checkbox" id="optFrame"> Hiện viền cửa sổ (tắt viền để capture gọn trong TikTok LIVE Studio/OBS)</label>
       <label class="chk"><input type="checkbox" data-k="window.openStageOnStart"> Mở màn hình LIVE khi khởi động</label>
+      <label class="chk"><input type="checkbox" data-k="window.disableGpu"> Tắt tăng tốc đồ hoạ (bật nếu app tự tắt, nhất là trên máy thuê/máy ảo — cần mở lại app)</label>
       <div class="row"><button id="btnClear">Xoá hết nhân vật</button></div>
       <p class="muted small">Trong TikTok LIVE Studio: thêm nguồn <b>Window Capture</b> → chọn cửa sổ “Chùa Live — Màn hình LIVE 9:16”.</p>
     </div>
@@ -107,7 +108,6 @@
       <label>Số bước rồi cúi chào 1 lần<input type="number" min="1" data-k="scene.stepsPerBow"></label>
       <label>Thời gian 1 bước (giây)<input type="number" step="0.05" data-k="scene.stepSeconds"></label>
       <label>Thời gian cúi chào (giây)<input type="number" step="0.1" data-k="scene.bowSeconds"></label>
-      <label>Tỉ lệ đi sang trái/phải (0–1)<input type="number" step="0.05" min="0" max="1" data-k="scene.sideWalkChance"></label>
       <label>Kích thước nhân vật (×)<input type="number" step="0.05" data-k="scene.charScale"></label>
       <label>Tốc độ video nền<input type="number" step="0.1" data-k="scene.videoRate"></label>
     </div>
@@ -135,7 +135,7 @@
     <div class="row"><button id="btnImportSheet" class="primary">+ Thêm nhân vật từ sprite sheet</button><button id="btnOpenUser">Mở thư mục dữ liệu</button></div>
     <div id="charList" class="charlist"></div>
   </div>
-  <p class="muted small">Sprite sheet chuẩn (giống ảnh mẫu): hàng trên 4 dáng đi ngang (quay mặt sang trái) + 2 dáng đi về phía trước; hàng dưới 2 dáng đi lên (lưng) + cúi chào + quỳ + vái lạy. Ảnh PNG nền trong suốt. Có thể gán lại từng khung cho từng trạng thái.</p>
+  <p class="muted small">Sprite sheet chuẩn (giống ảnh mẫu): hàng trên 4 dáng đi ngang (sẽ tự bỏ qua) + 2 dáng đi về phía trước; hàng dưới 2 dáng đi lên (lưng) + cúi chào + quỳ + vái lạy. Ảnh PNG nền trong suốt. Có thể gán lại từng khung cho từng trạng thái.</p>
 </section>
 
 <!-- ============ DONATE ============ -->

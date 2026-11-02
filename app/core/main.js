@@ -65,10 +65,37 @@ function log(msg, level = 'info') { const line = { t: Date.now(), msg: String(ms
 
 const webPrefs = { preload: path.join(APP, 'core', 'preload.js'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' };
 
+// ---------- Ghi lỗi crash & tự phục hồi ----------
+const CRASH_LOG = path.join(USER, 'crash.log');
+function crash(msg) { const line = new Date().toISOString() + '  ' + msg; try { fs.appendFileSync(CRASH_LOG, line + '\n'); } catch {} log(msg, 'error'); }
+function guardWindow(win, name) {
+  win.webContents.on('render-process-gone', (_e, d) => {
+    crash(`Cửa sổ ${name} bị lỗi (${d.reason}, code ${d.exitCode}) — tự tải lại`);
+    setTimeout(() => { if (!win.isDestroyed()) win.reload(); }, 800);
+  });
+  win.webContents.on('unresponsive', () => crash(`Cửa sổ ${name} bị treo`));
+}
+let prevSession = [];
+try {
+  const L = fs.readFileSync(CRASH_LOG, 'utf8').trim().split('\n');
+  const s = L.map(x => x.includes('(app khởi động)')).lastIndexOf(true);
+  const sess = L.slice(s + 1);
+  prevSession = sess.filter(x => !x.includes('(app đóng bình thường)'));
+  if (s >= 0 && !sess.some(x => x.includes('(app đóng bình thường)'))) prevSession.push('Lần trước app tắt đột ngột (không đóng bình thường).');
+  if (L.length > 400) fs.writeFileSync(CRASH_LOG, L.slice(-200).join('\n') + '\n');
+} catch {}
+try { fs.appendFileSync(CRASH_LOG, new Date().toISOString() + '  (app khởi động v' + C.appVer + ')\n'); } catch {}
+if (config.window.disableGpu) app.disableHardwareAcceleration();
+app.commandLine.appendSwitch('disable-gpu-process-crash-limit');
+app.on('child-process-gone', (_e, d) => crash(`Tiến trình ${d.type} dừng (${d.reason}, code ${d.exitCode})${d.type === 'GPU' ? ' — nếu lặp lại, bật "Tắt tăng tốc đồ hoạ" ở tab Kết nối LIVE' : ''}`));
 function createPanel() {
   const b = config.window.panel || {};
   panelWin = new BrowserWindow({ width: b.width || 1180, height: b.height || 820, x: b.x, y: b.y, minWidth: 900, minHeight: 600, title: 'Chùa Live — Bảng điều khiển', backgroundColor: '#14110d', webPreferences: webPrefs, autoHideMenuBar: true });
   panelWin.loadFile(path.join(APP, 'panel', 'index.html'));
+  guardWindow(panelWin, 'bảng điều khiển');
+  panelWin.webContents.once('did-finish-load', () => {
+    if (prevSession.length) log('Phiên trước có lỗi:\n' + prevSession.slice(-6).join('\n'), 'warn');
+  });
   panelWin.on('close', () => { config.window.panel = panelWin.getBounds(); writeJSON(CONFIG_PATH, config); });
   panelWin.on('closed', () => { panelWin = null; app.quit(); });
 }
@@ -82,6 +109,7 @@ function createStage() {
   });
   stageWin.setAspectRatio(9 / 16);
   stageWin.loadFile(path.join(APP, 'stage', 'index.html'));
+  guardWindow(stageWin, 'màn hình LIVE');
   const saveB = () => { if (stageWin && !stageWin.isDestroyed() && !stageWin.isFullScreen()) { const [w, h] = stageWin.getContentSize(); const [x, y] = stageWin.getPosition(); config.window.stage = { x, y, width: w, height: h }; saveConfig(); } };
   stageWin.on('resized', saveB); stageWin.on('moved', saveB);
   stageWin.on('closed', () => { stageWin = null; toPanel('stage-state', { open: false }); });
@@ -349,7 +377,7 @@ async function applyUpdate() {
   log('Đã cài bản ' + rv.version + ' (' + count + ' file). Khởi động lại...', 'ok');
   return { ok: true, version: rv.version, count };
 }
-function relaunch() { writeJSON(CONFIG_PATH, config); app.relaunch(); app.exit(0); }
+function relaunch() { writeJSON(CONFIG_PATH, config); try { fs.appendFileSync(CRASH_LOG, new Date().toISOString() + '  (app đóng bình thường — khởi động lại)\n'); } catch {} app.relaunch(); app.exit(0); }
 async function startupUpdate() {
   if (!config.update.auto || !config.update.repo) return false;
   try {
@@ -447,5 +475,6 @@ app.whenReady().then(async () => {
   if (config.tiktok.autoConnect && config.tiktok.username) setTimeout(() => tiktokConnect(config.tiktok.username).catch(e => log(e.message, 'error')), 1500);
 });
 app.on('window-all-closed', () => app.quit());
-process.on('uncaughtException', e => log('Lỗi: ' + (e && e.stack || e), 'error'));
+process.on('uncaughtException', e => crash('Lỗi: ' + (e && e.stack || e)));
+app.on('before-quit', () => { try { fs.appendFileSync(CRASH_LOG, new Date().toISOString() + '  (app đóng bình thường)\n'); } catch {} });
 process.on('unhandledRejection', e => log('Lỗi: ' + (e && e.message || e), 'error'));
