@@ -417,6 +417,12 @@ function render(dt) {
   if (!cfg) return;
   updateCam(dt);
   const k = scale * dpr;
+  // khung ngang (16:9): hai bên lấp bằng video nền phóng to + làm mờ, cảnh 9:16 ở giữa
+  if ((offX > 2 || offY > 2) && video.readyState >= 2) {
+    const cw = canvas.width, ch = canvas.height, s2 = Math.max(cw / W, ch / H);
+    ctx.save(); ctx.filter = 'blur(' + Math.round(18 * dpr) + 'px) brightness(0.55) saturate(1.2)';
+    ctx.drawImage(video, (cw - W * s2) / 2, (ch - H * s2) / 2, W * s2, H * s2); ctx.restore();
+  }
   ctx.setTransform(k * cam.z, 0, 0, k * cam.z, offX * dpr + k * (W / 2 - cam.x * cam.z), offY * dpr + k * (H / 2 - cam.y * cam.z));
   ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';

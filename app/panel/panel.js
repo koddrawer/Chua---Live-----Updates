@@ -60,7 +60,7 @@ $('#btnDisconnect').onclick = () => window.api.disconnect();
 // ---------- Stage ----------
 $('#btnStageOpen').onclick = () => window.api.openStage();
 $('#btnStageClose').onclick = () => window.api.closeStage();
-$$('[data-size]').forEach(b => b.onclick = () => window.api.stageSet({ size: +b.dataset.size }));
+$$('[data-w]').forEach(b => b.onclick = () => window.api.stageSet({ w: +b.dataset.w, h: +b.dataset.h }));
 let full = false; $('#btnFull').onclick = () => { full = !full; window.api.stageSet({ fullscreen: full }); };
 $('#btnReload').onclick = () => window.api.stageSet({ reload: true });
 $('#optTop').onchange = e => window.api.stageSet({ onTop: e.target.checked });

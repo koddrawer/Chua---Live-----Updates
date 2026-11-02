@@ -44,7 +44,7 @@
       <div class="row wrap">
         <button id="btnStageOpen" class="primary">Mở màn hình LIVE</button>
         <button id="btnStageClose">Đóng</button>
-        <button data-size="960">540×960</button><button data-size="1280">720×1280</button><button data-size="1920">1080×1920</button>
+        <button data-w="540" data-h="960">Dọc 540×960</button><button data-w="720" data-h="1280">Dọc 720×1280</button><button data-w="1080" data-h="1920">Dọc 1080×1920</button><button data-w="1280" data-h="720">Ngang 1280×720</button><button data-w="1920" data-h="1080">Ngang 1920×1080</button>
         <button id="btnFull">Toàn màn hình</button>
         <button id="btnReload">Tải lại</button>
       </div>
@@ -208,6 +208,7 @@
       <div class="row"><button id="btnVoiceTest" class="primary">Kiểm tra giọng</button><span id="voiceTestMsg" class="small"></span></div>
       <label>Giọng giảng pháp<select data-k="voice.voice" class="voiceSel"></select></label>
       <label>Giọng cảm ơn / đọc quẻ<select data-k="voice.thanksVoice" class="voiceSel"></select></label>
+      <p class="muted small">Giọng nam (Nam Minh) chỉ có ở giọng AI Microsoft. Nếu Microsoft lỗi, app chuyển sang Google — Google chỉ có giọng nữ. Bấm “Kiểm tra giọng” để xem Microsoft có chạy không.</p>
       <div class="grid2">
         <label>Tốc độ giảng (%)<input type="number" data-k="voice.rate"></label>
         <label>Cao độ giảng (Hz)<input type="number" data-k="voice.pitch"></label>

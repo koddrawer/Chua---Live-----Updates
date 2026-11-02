@@ -113,7 +113,7 @@ function createStage() {
     title: 'Chùa Live — Màn hình LIVE 9:16', backgroundColor: '#000000', webPreferences: webPrefs, autoHideMenuBar: true,
     alwaysOnTop: !!config.window.stageOnTop, frame: config.window.stageFrame !== false,
   });
-  stageWin.setAspectRatio(9 / 16);
+  stageWin.setAspectRatio(config.window.aspect === '16:9' ? 16 / 9 : 9 / 16);
   stageWin.loadFile(path.join(APP, 'stage', 'index.html'));
   guardWindow(stageWin, 'màn hình LIVE');
   const saveB = () => { if (stageWin && !stageWin.isDestroyed() && !stageWin.isFullScreen()) { const [w, h] = stageWin.getContentSize(); const [x, y] = stageWin.getPosition(); config.window.stage = { x, y, width: w, height: h }; saveConfig(); } };
@@ -420,7 +420,15 @@ ipcMain.handle('stage:set', (_e, o) => {
   if (o.frame !== undefined) { config.window.stageFrame = !!o.frame; saveConfig(); if (stageWin) { stageWin.close(); setTimeout(createStage, 300); } return true; }
   if (!stageWin) return false;
   if (o.onTop !== undefined) stageWin.setAlwaysOnTop(!!o.onTop);
-  if (o.size) { stageWin.setFullScreen(false); stageWin.setContentSize(Math.round(o.size * 9 / 16), o.size); }
+  if (o.size) { o.w = Math.round(o.size * 9 / 16); o.h = o.size; }
+  if (o.w && o.h) {
+    const aspect = o.w > o.h ? '16:9' : '9:16';
+    config.window.aspect = aspect; saveConfig();
+    stageWin.setFullScreen(false);
+    stageWin.setAspectRatio(0); stageWin.setContentSize(o.w, o.h); stageWin.setAspectRatio(o.w / o.h);
+    const [cw, ch] = stageWin.getContentSize();
+    if (cw < o.w - 2 || ch < o.h - 2) log(`Màn hình máy nhỏ hơn ${o.w}×${o.h} nên cửa sổ chỉ được ${cw}×${ch}. Trong TikTok LIVE Studio/OBS có thể phóng nguồn Window Capture lên cho vừa khung.`, 'warn');
+  }
   if (o.fullscreen !== undefined) stageWin.setFullScreen(!!o.fullscreen);
   if (o.reload) stageWin.reload();
   return true;
