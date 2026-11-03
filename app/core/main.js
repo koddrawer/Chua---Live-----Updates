@@ -340,9 +340,89 @@ async function ttsGoogle(text, o = {}) {
 }
 const ttsErrAt = {};
 function ttsErr(engine, e) { const now = Date.now(); if (!ttsErrAt[engine] || now - ttsErrAt[engine] > 60000) { ttsErrAt[engine] = now; log('Giọng ' + engine + ' lỗi: ' + (e && e.message || e), 'warn'); } }
+// ---------------- VieNeu-TTS (chạy trên máy người dùng) ----------------
+const { spawn } = require('child_process');
+const vn = { proc: null, status: 'off', voices: [], err: '', starting: false };
+const vnCfg = () => config.vieneu || {};
+const vnBase = () => 'http://127.0.0.1:' + (vnCfg().port || 8765);
+function vnState() { return { status: vn.status, voices: vn.voices, err: vn.err, running: !!vn.proc }; }
+function vnEmit() { toPanel('vieneu-state', vnState()); }
+function pyCandidates() { const c = (vnCfg().python || '').trim(); return c ? [c] : (process.platform === 'win32' ? ['python', 'py'] : ['python3', 'python']); }
+async function vnHealth() {
+  try { const r = await net.fetch(vnBase() + '/health'); if (!r.ok) return null; return await r.json(); } catch { return null; }
+}
+function spawnPy(args, label, onLine) {
+  return new Promise(res => {
+    const cands = pyCandidates(); let i = 0;
+    const tryNext = () => {
+      if (i >= cands.length) return res({ ok: false, error: 'Không tìm thấy Python. Cài Python 3.10+ từ python.org (tích "Add python.exe to PATH") rồi thử lại.' });
+      const cmd = cands[i++];
+      let p; try { p = spawn(cmd, args, { windowsHide: true, env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } }); } catch (e) { return tryNext(); }
+      let started = false;
+      p.on('error', () => { if (!started) tryNext(); });
+      p.on('spawn', () => { started = true; res({ ok: true, proc: p, cmd }); });
+      const feed = d => String(d).split(/\r?\n/).forEach(l => { l = l.trim(); if (l) onLine && onLine(l); });
+      p.stdout && p.stdout.on('data', feed); p.stderr && p.stderr.on('data', feed);
+    };
+    tryNext();
+  });
+}
+async function vnInstall() {
+  log('Đang cài VieNeu-TTS (python -m pip install -U vieneu) — lần đầu mất vài phút...');
+  let last = 0;
+  const r = await spawnPy(['-m', 'pip', 'install', '-U', 'vieneu'], 'pip', l => { if (Date.now() - last > 1500 || /Successfully|ERROR|error/i.test(l)) { last = Date.now(); log('[pip] ' + l.slice(0, 200)); } });
+  if (!r.ok) { log(r.error, 'error'); return r; }
+  return await new Promise(res => r.proc.on('exit', code => { const ok = code === 0; log(ok ? 'Đã cài xong VieNeu-TTS.' : 'Cài VieNeu-TTS lỗi (mã ' + code + ').', ok ? 'ok' : 'error'); res({ ok }); }));
+}
+async function vnStart() {
+  if (vn.starting) return vnState();
+  const h0 = await vnHealth();
+  if (h0 && h0.ok) { vn.status = 'ready'; vn.voices = h0.voices || []; vnEmit(); return vnState(); }
+  if (!vn.proc) {
+    vn.starting = true; vn.status = 'starting'; vn.err = ''; vnEmit();
+    const script = path.join(APP, 'tools', 'vieneu_server.py');
+    let last = 0;
+    const r = await spawnPy([script, String(vnCfg().port || 8765)], 'vieneu', l => { if (Date.now() - last > 2000 || /error|lỗi|sẵn sàng|Traceback/i.test(l)) { last = Date.now(); log('[VieNeu] ' + l.slice(0, 220)); } });
+    vn.starting = false;
+    if (!r.ok) { vn.status = 'error'; vn.err = r.error; vnEmit(); log(r.error, 'error'); return vnState(); }
+    vn.proc = r.proc;
+    vn.proc.on('exit', code => { vn.proc = null; if (vn.status !== 'off') { vn.status = 'error'; vn.err = 'Máy chủ VieNeu đã dừng (mã ' + code + '). Có thể chưa cài: bấm "Cài VieNeu".'; vnEmit(); } });
+  }
+  // chờ tải model (lần đầu tải từ Internet, có thể vài phút)
+  for (let k = 0; k < 300 && vn.proc; k++) {
+    await new Promise(r => setTimeout(r, 2000));
+    const h = await vnHealth();
+    if (h && h.ok) { vn.status = 'ready'; vn.voices = h.voices || []; vnEmit(); log('VieNeu-TTS sẵn sàng (' + vn.voices.length + ' giọng).', 'ok'); return vnState(); }
+    if (h && h.error) { vn.status = 'error'; vn.err = h.error; vnEmit(); log('VieNeu lỗi: ' + h.error, 'error'); return vnState(); }
+  }
+  return vnState();
+}
+function vnStop() { vn.status = 'off'; if (vn.proc) { try { vn.proc.kill(); } catch {} vn.proc = null; } vnEmit(); }
+app.on('before-quit', () => { if (vn.proc) try { vn.proc.kill(); } catch {} });
+async function ttsVieneu(text, o = {}) {
+  text = String(text || '').trim(); if (!text) return null;
+  const c = vnCfg();
+  const role = (o.voice && o.voice === config.voice.thanksVoice && config.voice.thanksVoice !== config.voice.voice) ? 'thanks' : 'sermon';
+  const voice = role === 'thanks' ? (c.thanksVoice || c.voice) : c.voice;
+  const ref = role === 'thanks' ? (c.thanksRef || '') : (c.sermonRef || '');
+  const key = crypto.createHash('sha1').update(['vieneu', voice, ref, text].join('|')).digest('hex');
+  const file = path.join(DIRS.ttsCache, key + '.wav');
+  if (fs.existsSync(file)) return fs.readFileSync(file);
+  if (vn.status !== 'ready') { const h = await vnHealth(); if (!(h && h.ok)) { if (!vn.proc && !vn.starting) vnStart(); throw new Error('Máy chủ VieNeu chưa sẵn sàng'); } vn.status = 'ready'; }
+  const r = await net.fetch(vnBase() + '/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, voice: voice || undefined, ref_audio: ref || undefined }) });
+  if (!r.ok) { let m = 'HTTP ' + r.status; try { m = (await r.json()).error || m; } catch {} throw new Error(m); }
+  const buf = Buffer.from(await r.arrayBuffer());
+  if (buf.length < 1000) throw new Error('VieNeu trả về rỗng');
+  fs.writeFileSync(file, buf); return buf;
+}
 async function tts(text, o = {}) {
   const engine = config.voice.engine || 'edge';
   if (engine === 'off' || engine === 'system') return null;
+  if (engine === 'vieneu') {
+    try { return await ttsVieneu(text, o); } catch (e) { ttsErr('VieNeu', e); }
+    try { return await ttsEdge(text, o); } catch (e) { ttsErr('Microsoft', e); }
+    try { return await ttsGoogle(text, o); } catch (e) { ttsErr('Google', e); throw e; }
+  }
   if (engine === 'edge') {
     try { return await ttsEdge(text, o); } catch (e) { ttsErr('Microsoft', e); if (config.voice.fallbackGoogle === false) throw e; }
   }
@@ -482,6 +562,30 @@ ipcMain.handle('tts:test', async (_e, engine) => {
   const text = 'A Di Đà Phật, xin chào quý Phật tử.';
   try { const b = engine === 'google' ? await ttsGoogle(text + ' ') : await ttsEdge(text, {}); return { ok: true, bytes: b.length }; } catch (e) { return { ok: false, error: e.message }; }
 });
+ipcMain.handle('vieneu:status', async () => { const h = await vnHealth(); if (h && h.ok) { vn.status = 'ready'; vn.voices = h.voices || []; } return vnState(); });
+ipcMain.handle('vieneu:install', () => vnInstall());
+ipcMain.handle('vieneu:start', () => vnStart());
+ipcMain.handle('vieneu:stop', () => { vnStop(); return vnState(); });
+ipcMain.handle('vieneu:test', async (_e, role) => {
+  try { const b = await ttsVieneu('A Di Đà Phật, kính chào quý Phật tử đã về chùa.', { voice: role === 'thanks' ? config.voice.thanksVoice : config.voice.voice }); return { ok: true, data: b }; } catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('vieneu:clone', async (_e, { name, file }) => {
+  const dir = path.join(USER, 'user', 'voices'); fs.mkdirSync(dir, { recursive: true });
+  const dest = path.join(dir, Date.now() + '_' + path.basename(file)); fs.copyFileSync(file, dest);
+  try { const r = await net.fetch(vnBase() + '/add_voice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, path: dest }) }); const j = await r.json(); if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status); vn.voices = j.voices || vn.voices; vnEmit(); return { ok: true, path: dest }; }
+  catch (e) { return { ok: false, error: e.message, path: dest }; }
+});
+ipcMain.handle('vieneu:prerender', async () => {
+  const c = config.content; const S = (c.custom && c.sermons) ? c.sermons : loadContent().sermons;
+  const lines = S.flatMap(s => s.lines); let ok = 0, fail = 0;
+  log('Đang tạo sẵn giọng VieNeu cho ' + lines.length + ' câu giảng...');
+  for (let i = 0; i < lines.length; i++) {
+    try { await ttsVieneu(lines[i], { voice: config.voice.voice }); ok++; } catch (e) { fail++; if (fail > 5 && ok === 0) { log('Dừng tạo giọng: ' + e.message, 'error'); break; } }
+    if (i % 10 === 9) log('Đã tạo ' + (i + 1) + '/' + lines.length + ' câu');
+  }
+  log('Xong: ' + ok + ' câu đã có sẵn giọng VieNeu' + (fail ? ', lỗi ' + fail : ''), ok ? 'ok' : 'warn');
+  return { ok, fail };
+});
 ipcMain.handle('tts:clear', () => { for (const f of fs.readdirSync(DIRS.ttsCache)) fs.rmSync(path.join(DIRS.ttsCache, f), { force: true }); return 0; });
 ipcMain.handle('tts:count', () => ttsCacheSize());
 ipcMain.handle('avatar', (_e, url) => fetchAvatar(url));
@@ -586,6 +690,7 @@ app.whenReady().then(async () => {
   if (config.tiktok.autoConnect && config.tiktok.username) setTimeout(() => tiktokConnect(config.tiktok.username).catch(e => log(e.message, 'error')), 1500);
 });
 app.on('window-all-closed', () => app.quit());
+app.whenReady().then(() => { if (config.voice.engine === 'vieneu') setTimeout(() => vnStart().catch(() => {}), 3000); });
 process.on('uncaughtException', e => crash('Lỗi: ' + (e && e.stack || e)));
 app.on('before-quit', () => { try { fs.appendFileSync(CRASH_LOG, new Date().toISOString() + '  (app đóng bình thường)\n'); } catch {} });
 process.on('unhandledRejection', e => log('Lỗi: ' + (e && e.message || e), 'error'));

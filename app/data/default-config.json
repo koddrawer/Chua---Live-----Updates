@@ -267,5 +267,13 @@
     "pixel": true,
     "charPixels": 64,
     "fxRes": 240
+  },
+  "vieneu": {
+    "python": "",
+    "port": 8765,
+    "voice": "",
+    "thanksVoice": "",
+    "sermonRef": "",
+    "thanksRef": ""
   }
 }

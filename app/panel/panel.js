@@ -345,6 +345,39 @@ $('#btnRandomize').onclick = async () => {
 $('#btnExport').onclick = async () => { const r = await window.api.exportConfig(); if (r) $('#profMsg').textContent = 'Đã lưu: ' + r; };
 $('#btnImport').onclick = async () => { try { const r = await window.api.importConfig(); if (r) $('#profMsg').textContent = 'Đã nạp cấu hình.'; } catch (e) { $('#profMsg').textContent = 'Lỗi: ' + e.message; } };
 
+// ---------- VieNeu-TTS ----------
+const VNST = { off: 'Chưa chạy', starting: 'Đang khởi động / tải model…', ready: 'Sẵn sàng ✓', error: 'Lỗi' };
+let vnVoices = [];
+function renderVN(s) {
+  if (!s) return; vnVoices = s.voices || vnVoices;
+  $('#vnStatus').textContent = (VNST[s.status] || s.status) + (s.err ? ' — ' + s.err : '') + (s.status === 'ready' ? ' · ' + vnVoices.length + ' giọng' : '');
+  $('#vnStatus').className = s.status === 'ready' ? 'ok' : s.status === 'error' ? 'bad' : 'muted';
+  for (const [id, key] of [['#vnVoice', 'voice'], ['#vnThanks', 'thanksVoice']]) {
+    const sel = $(id), cur = (cfg && cfg.vieneu && cfg.vieneu[key]) || '';
+    const opts = [['', 'Mặc định (Adam)'], ...vnVoices.map(v => [v.id, v.label])];
+    if (cur && !opts.some(o => o[0] === cur)) opts.push([cur, cur]);
+    sel.innerHTML = opts.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join(''); sel.value = cur;
+  }
+}
+$('#vnVoice').onchange = e => window.api.setConfig('vieneu.voice', e.target.value);
+$('#vnThanks').onchange = e => window.api.setConfig('vieneu.thanksVoice', e.target.value);
+$('#vnInstall').onclick = async () => { $('#vnStatus').textContent = 'Đang cài… (xem tiến trình ở Nhật ký tab Kết nối LIVE)'; const r = await window.api.vieneu.install(); $('#vnStatus').textContent = r.ok ? 'Đã cài xong — bấm Khởi động' : ('Cài lỗi: ' + (r.error || 'xem Nhật ký')); };
+$('#vnStart').onclick = async () => { $('#vnStatus').textContent = VNST.starting; renderVN(await window.api.vieneu.start()); };
+$('#vnStop').onclick = async () => renderVN(await window.api.vieneu.stop());
+async function vnTest(role) { const r = await window.api.vieneu.test(role); if (!r.ok) { $('#vnStatus').textContent = 'Lỗi: ' + r.error; return; } const a = new Audio(URL.createObjectURL(new Blob([r.data], { type: 'audio/wav' }))); a.play(); }
+$('#vnTestS').onclick = () => vnTest('sermon'); $('#vnTestT').onclick = () => vnTest('thanks');
+$('#vnPre').onclick = async () => { $('#vnPre').disabled = true; const r = await window.api.vieneu.prerender(); $('#vnPre').disabled = false; $('#vnStatus').textContent = 'Đã tạo sẵn ' + r.ok + ' câu' + (r.fail ? ', lỗi ' + r.fail : ''); };
+$('#vnClone').onclick = async () => {
+  const name = $('#vnCloneName').value.trim() || 'Giọng của tôi';
+  const f = await window.api.openDialog({ filters: [{ name: 'Ghi âm', extensions: ['wav', 'mp3', 'm4a', 'flac', 'ogg'] }] }); if (!f.length) return;
+  $('#vnStatus').textContent = 'Đang nhân bản giọng…';
+  const r = await window.api.vieneu.clone({ name, file: f[0].path });
+  if (r.ok) { $('#vnStatus').textContent = 'Đã thêm giọng "' + name + '"'; renderVN(await window.api.vieneu.status()); }
+  else { $('#vnStatus').textContent = 'Không lưu được giọng (' + r.error + ') — dùng trực tiếp file ghi âm cho giọng giảng.'; await window.api.setConfig('vieneu.sermonRef', r.path); }
+};
+window.api.on('vieneu-state', renderVN);
+window.api.vieneu.status().then(renderVN);
+
 // ---------- Âm thanh ----------
 $('#btnVoiceTest').onclick = async () => {
   const m = $('#voiceTestMsg'); m.textContent = 'Đang kiểm tra…'; m.className = 'small';

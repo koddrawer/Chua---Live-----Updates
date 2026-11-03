@@ -258,11 +258,33 @@
 
 <!-- ============ AUDIO ============ -->
 <section id="tab-audio" class="tab">
+  <div class="card">
+    <h3>VieNeu-TTS <span class="muted small">— giọng tiếng Việt tự nhiên, 3 miền, chạy ngay trên máy (không cần Internet sau khi tải model), có nhân bản giọng</span></h3>
+    <div class="row wrap"><b>Trạng thái:</b> <span id="vnStatus" class="muted">—</span></div>
+    <div class="row wrap">
+      <button id="vnInstall">1. Cài VieNeu</button>
+      <button id="vnStart" class="primary">2. Khởi động</button>
+      <button id="vnStop">Dừng</button>
+      <button id="vnTestS">Nghe thử giọng giảng</button>
+      <button id="vnTestT">Nghe thử giọng cảm ơn</button>
+      <button id="vnPre">Tạo sẵn giọng cho toàn bộ bài giảng</button>
+    </div>
+    <div class="grid3">
+      <label>Giọng giảng pháp<select id="vnVoice"></select></label>
+      <label>Giọng cảm ơn / đọc quẻ<select id="vnThanks"></select></label>
+      <label>Lệnh Python (để trống = tự tìm)<input data-k="vieneu.python" placeholder="python"></label>
+    </div>
+    <details><summary>Nhân bản giọng (từ file ghi âm 3–8 giây)</summary>
+      <div class="row wrap"><input id="vnCloneName" placeholder="Tên giọng, vd: Sư thầy" style="width:220px"><button id="vnClone">Chọn file ghi âm & nhân bản</button></div>
+      <p class="muted small">Ghi âm rõ, ít tạp âm, 3–8 giây (wav/mp3). Sau khi nhân bản, giọng mới xuất hiện trong danh sách chọn giọng.</p>
+    </details>
+    <p class="muted small">Cần Python 3.10+ (python.org, tích “Add python.exe to PATH”). Bấm 1 lần “Cài VieNeu”, rồi chọn Bộ đọc = VieNeu-TTS bên dưới — app tự khởi động máy chủ giọng mỗi lần mở. Lần đầu khởi động sẽ tải model (vài trăm MB). Nếu VieNeu lỗi, app tự chuyển sang giọng Microsoft/Google.</p>
+  </div>
   <div class="grid2">
     <div class="card">
       <h3>Giọng đọc</h3>
       <label>Bộ đọc
-        <select data-k="voice.engine"><option value="edge">Giọng AI Microsoft (cần Internet, hay nhất)</option><option value="google">Giọng Google (cần Internet)</option><option value="system">Giọng có sẵn trong Windows (cần cài giọng tiếng Việt)</option><option value="off">Tắt giọng (chỉ hiện chữ)</option></select></label>
+        <select data-k="voice.engine"><option value="edge">Giọng AI Microsoft (cần Internet, hay nhất)</option><option value="vieneu">VieNeu-TTS — giọng AI chạy trên máy (tự nhiên, offline)</option><option value="google">Giọng Google (cần Internet)</option><option value="system">Giọng có sẵn trong Windows (cần cài giọng tiếng Việt)</option><option value="off">Tắt giọng (chỉ hiện chữ)</option></select></label>
       <label class="chk"><input type="checkbox" data-k="voice.fallbackGoogle"> Nếu giọng Microsoft lỗi thì tự chuyển sang giọng Google</label>
       <div class="row"><button id="btnVoiceTest" class="primary">Kiểm tra giọng</button><span id="voiceTestMsg" class="small"></span></div>
       <label>Giọng giảng pháp<select data-k="voice.voice" class="voiceSel"></select></label>

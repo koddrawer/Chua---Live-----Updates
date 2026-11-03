@@ -48,7 +48,8 @@
     const p = (async () => {
       const r = await window.api.tts(text, { voice, rate, pitch });
       if (!r || r.error) throw new Error(r ? r.error : 'TTS lỗi');
-      return URL.createObjectURL(new Blob([r], { type: 'audio/mpeg' }));
+      const isWav = r[0] === 0x52 && r[1] === 0x49 && r[2] === 0x46 && r[3] === 0x46; // 'RIFF'
+      return URL.createObjectURL(new Blob([r], { type: isWav ? 'audio/wav' : 'audio/mpeg' }));
     })();
     blobCache.set(key, p);
     p.catch(() => blobCache.delete(key));
