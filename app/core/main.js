@@ -347,7 +347,12 @@ const vnCfg = () => config.vieneu || {};
 const vnBase = () => 'http://127.0.0.1:' + (vnCfg().port || 8765);
 function vnState() { return { status: vn.status, voices: vn.voices, err: vn.err, running: !!vn.proc }; }
 function vnEmit() { toPanel('vieneu-state', vnState()); }
-function pyCandidates() { const c = (vnCfg().python || '').trim(); return c ? [c] : (process.platform === 'win32' ? ['python', 'py'] : ['python3', 'python']); }
+function splitCmd(c) { const m = c.match(/^"([^"]+)"\s*(.*)$/); if (m) return [m[1], ...m[2].split(/\s+/).filter(Boolean)]; const p = c.split(/\s+/); return [p[0], ...p.slice(1)]; }
+function pyCandidates() {
+  const c = (vnCfg().python || '').trim(); if (c) return [c];
+  const out = []; if (vnCfg().pythonExe) out.push('"' + vnCfg().pythonExe + '"');
+  return out.concat(process.platform === 'win32' ? ['python', 'py -3.12', 'py -3.11', 'py'] : ['python3', 'python']);
+}
 async function vnHealth() {
   try { const r = await net.fetch(vnBase() + '/health'); if (!r.ok) return null; return await r.json(); } catch { return null; }
 }
@@ -356,8 +361,8 @@ function spawnPy(args, label, onLine) {
     const cands = pyCandidates(); let i = 0;
     const tryNext = () => {
       if (i >= cands.length) return res({ ok: false, error: 'Không tìm thấy Python. Cài Python 3.10+ từ python.org (tích "Add python.exe to PATH") rồi thử lại.' });
-      const cmd = cands[i++];
-      let p; try { p = spawn(cmd, args, { windowsHide: true, env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } }); } catch (e) { return tryNext(); }
+      const cmd = cands[i++]; const [exe, ...pre] = splitCmd(cmd);
+      let p; try { p = spawn(exe, [...pre, ...args], { windowsHide: true, env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } }); } catch (e) { return tryNext(); }
       let started = false;
       p.on('error', () => { if (!started) tryNext(); });
       p.on('spawn', () => { started = true; res({ ok: true, proc: p, cmd }); });
@@ -367,12 +372,24 @@ function spawnPy(args, label, onLine) {
     tryNext();
   });
 }
+// ghi nhớ đúng file python.exe đã cài vieneu để lần sau chạy đúng trình thông dịch đó
+function runCapture(cmd, args) {
+  return new Promise(res => { const [exe, ...pre] = splitCmd(cmd); let out = ''; let p; try { p = spawn(exe, [...pre, ...args], { windowsHide: true, env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } }); } catch { return res({ code: -1, out: '' }); }
+    p.on('error', () => res({ code: -1, out })); p.stdout.on('data', d => out += d); p.stderr.on('data', d => out += d); p.on('exit', code => res({ code, out })); });
+}
+async function vnRememberPython(cmd) {
+  const r = await runCapture(cmd, ['-c', 'import sys, vieneu; print("EXE=" + sys.executable)']);
+  const m = r.out.match(/EXE=(.+)/);
+  if (r.code === 0 && m) { config.vieneu = { ...(config.vieneu || {}), pythonExe: m[1].trim() }; saveConfig(); log('VieNeu dùng Python: ' + m[1].trim()); return true; }
+  log('Kiểm tra VieNeu sau khi cài thất bại: ' + r.out.trim().split('\n').slice(-2).join(' '), 'warn'); return false;
+}
 async function vnInstall() {
   log('Đang cài VieNeu-TTS (python -m pip install -U vieneu) — lần đầu mất vài phút...');
   let last = 0;
   const r = await spawnPy(['-m', 'pip', 'install', '-U', 'vieneu'], 'pip', l => { if (Date.now() - last > 1500 || /Successfully|ERROR|error/i.test(l)) { last = Date.now(); log('[pip] ' + l.slice(0, 200)); } });
   if (!r.ok) { log(r.error, 'error'); return r; }
-  return await new Promise(res => r.proc.on('exit', code => { const ok = code === 0; log(ok ? 'Đã cài xong VieNeu-TTS. Đang khởi động máy chủ giọng (lần đầu sẽ tải model, vui lòng chờ)...' : 'Cài VieNeu-TTS lỗi (mã ' + code + ').', ok ? 'ok' : 'error'); if (ok) { if (vn.proc) { try { vn.proc.kill(); } catch {} vn.proc = null; } setTimeout(() => vnStart().catch(() => {}), 500); } res({ ok }); }));
+  const usedCmd = r.cmd;
+  return await new Promise(res => r.proc.on('exit', async code => { const ok = code === 0; if (ok) await vnRememberPython(usedCmd); log(ok ? 'Đã cài xong VieNeu-TTS. Đang khởi động máy chủ giọng (lần đầu sẽ tải model, vui lòng chờ)...' : 'Cài VieNeu-TTS lỗi (mã ' + code + ').', ok ? 'ok' : 'error'); if (ok) { if (vn.proc) { try { vn.proc.kill(); } catch {} vn.proc = null; } setTimeout(() => vnStart().catch(() => {}), 500); } res({ ok }); }));
 }
 async function vnStart() {
   if (vn.starting) return vnState();
@@ -393,7 +410,14 @@ async function vnStart() {
     await new Promise(r => setTimeout(r, 2000));
     const h = await vnHealth();
     if (h && h.ok) { vn.status = 'ready'; vn.voices = h.voices || []; vnEmit(); log('VieNeu-TTS sẵn sàng (' + vn.voices.length + ' giọng).', 'ok'); return vnState(); }
-    if (h && h.error) { vn.status = 'error'; vn.err = h.error; vnEmit(); log('VieNeu lỗi: ' + h.error, 'error'); return vnState(); }
+    if (h && h.error) {
+      if (/No module named 'vieneu'/.test(h.error) && !vn.retried) {
+        vn.retried = true; vnStop(); vn.status = 'starting'; vnEmit();
+        for (const c of pyCandidates()) { if (await vnRememberPython(c)) { log('Đã tìm thấy Python có VieNeu — khởi động lại máy chủ giọng...'); return vnStart(); } }
+        log('Chưa có Python nào cài được VieNeu. Bấm "1. Cài VieNeu" lại.', 'warn');
+      }
+      vn.status = 'error'; vn.err = h.error + (h.python ? ' (Python: ' + h.python + ')' : ''); vnEmit(); log('VieNeu lỗi: ' + vn.err, 'error'); return vnState();
+    }
   }
   return vnState();
 }

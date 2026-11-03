@@ -1,4 +1,4 @@
 {
-  "version": "1.0.21",
-  "notes": "VieNeu: tự khởi động máy chủ giọng ngay sau khi cài xong"
+  "version": "1.0.22",
+  "notes": "VieNeu: ghi nhớ đúng Python đã cài, tự dò lại khi báo 'No module named vieneu', hiện đường dẫn Python khi lỗi"
 }

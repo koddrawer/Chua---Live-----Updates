@@ -79,7 +79,7 @@ class H(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.startswith("/health"):
-            return self._json(200, {"ok": ENGINE is not None, "loading": ENGINE is None and ERR is None, "error": ERR, "voices": VOICES})
+            return self._json(200, {"ok": ENGINE is not None, "loading": ENGINE is None and ERR is None, "error": ERR, "voices": VOICES, "python": sys.executable})
         self._json(404, {"error": "not found"})
 
     def do_POST(self):
