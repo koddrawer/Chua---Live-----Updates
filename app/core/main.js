@@ -372,7 +372,7 @@ async function vnInstall() {
   let last = 0;
   const r = await spawnPy(['-m', 'pip', 'install', '-U', 'vieneu'], 'pip', l => { if (Date.now() - last > 1500 || /Successfully|ERROR|error/i.test(l)) { last = Date.now(); log('[pip] ' + l.slice(0, 200)); } });
   if (!r.ok) { log(r.error, 'error'); return r; }
-  return await new Promise(res => r.proc.on('exit', code => { const ok = code === 0; log(ok ? 'Đã cài xong VieNeu-TTS.' : 'Cài VieNeu-TTS lỗi (mã ' + code + ').', ok ? 'ok' : 'error'); res({ ok }); }));
+  return await new Promise(res => r.proc.on('exit', code => { const ok = code === 0; log(ok ? 'Đã cài xong VieNeu-TTS. Đang khởi động máy chủ giọng (lần đầu sẽ tải model, vui lòng chờ)...' : 'Cài VieNeu-TTS lỗi (mã ' + code + ').', ok ? 'ok' : 'error'); if (ok) { if (vn.proc) { try { vn.proc.kill(); } catch {} vn.proc = null; } setTimeout(() => vnStart().catch(() => {}), 500); } res({ ok }); }));
 }
 async function vnStart() {
   if (vn.starting) return vnState();

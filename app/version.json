@@ -1,4 +1,4 @@
 {
-  "version": "1.0.20",
-  "notes": "Thêm bộ đọc VieNeu-TTS (giọng tiếng Việt tự nhiên chạy trên máy, 3 miền, nhân bản giọng, tạo sẵn giọng bài giảng; tự chuyển sang Microsoft/Google khi lỗi)"
+  "version": "1.0.21",
+  "notes": "VieNeu: tự khởi động máy chủ giọng ngay sau khi cài xong"
 }
