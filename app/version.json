@@ -1,4 +1,4 @@
 {
-  "version": "1.0.23",
-  "notes": "Sửa lẫn giọng: đổi giọng không dùng lại âm thanh cũ, chế độ chỉ dùng giọng VieNeu, không tự rơi về giọng Windows"
+  "version": "1.0.24",
+  "notes": "Khung donate, thẻ chúc phúc và avatar treo giữ kiểu thường (không 8-bit)"
 }

@@ -822,7 +822,7 @@ function addToGallery(o) {
   Object.assign(av.style, { width: dd + 'px', height: dd + 'px', left: (fr.cx * size - dd / 2) + 'px', top: (fr.cy * fh - dd / 2) + 'px' });
   av.onerror = () => { av.onerror = null; av.src = defaultAvatar(o.user.nickname); };
   av.src = o.avatar || defaultAvatar(o.user.nickname);
-  setPixSrc(el.querySelector('.fr'), fr.url, 72, { levels: 6 });
+  el.querySelector('.fr').src = fr.url;
   const nm = el.querySelector('.gname'); if (nm) { nm.textContent = o.user.nickname; nm.style.fontSize = Math.max(11, Math.round(size * 0.16)) + 'px'; nm.style.maxWidth = (size + 30) + 'px'; if (o.tier.color) nm.style.color = o.tier.color; }
   // điểm xuất phát: chỗ avatar trên thẻ chúc phúc
   const f = o.from || { x: W / 2 - size / 2, y: 300, w: size };
@@ -902,7 +902,7 @@ function showCard(o, instant) {
     <div class="dc-info"><div class="dc-name"></div><div class="dc-tier"></div><div class="dc-gift"></div></div>`;
   const av = el.querySelector('.av'), fimg = el.querySelector('.fr');
   if (fr) {
-    setPixSrc(fimg, fr.url, 150, { levels: 7 });
+    fimg.src = fr.url;
     const fh = fw * fr.h / fr.w, dd = fr.r * fw * 2 * 1.06;
     Object.assign(av.style, { width: dd + 'px', height: dd + 'px', left: (fr.cx * fw - dd / 2) + 'px', top: (fr.cy * fh - dd / 2) + 'px' });
   }

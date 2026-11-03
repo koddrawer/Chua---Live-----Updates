@@ -100,17 +100,12 @@ body.edit #cardLayer .dc-frame, body.edit #cardLayer .dfortune { pointer-events:
 body.edit #chat, body.edit #camwrap { pointer-events: auto; cursor: move; outline: 2px dashed #49f; }
 
 /* ================= GIAO DIỆN 8-BIT ================= */
-body.pixel #ui, body.pixel #ui * { font-family: 'PixelVN', monospace !important; font-style: normal !important; font-weight: 400 !important; letter-spacing: 0 !important; }
+body.pixel #ui, body.pixel #ui *:not(#cardLayer, #cardLayer *, #gallery, #gallery *) { font-family: 'PixelVN', monospace !important; font-style: normal !important; font-weight: 400 !important; letter-spacing: 0 !important; }
 /* font pixel nét nhất ở cỡ 16 / 32 px */
 body.pixel .board { font-size: 16px !important; }
-body.pixel .dc-name { font-size: 32px !important; }
-body.pixel .dc-tier, body.pixel .dc-gift, body.pixel .ft-title, body.pixel .ft-meaning, body.pixel .ft-level { font-size: 16px !important; }
-body.pixel .ft-verse { font-size: 32px !important; line-height: 1.25 !important; }
-body.pixel .dc-head { font-size: 32px !important; }
 body.pixel #titleBar { font-size: 32px !important; }
 body.pixel #liveinfo { font-size: 16px !important; }
-body.pixel .gitem .gname { font-size: 16px !important; }
-body.pixel img { image-rendering: pixelated; }
+body.pixel img:not(#cardLayer img):not(#gallery img) { image-rendering: pixelated; }
 /* avatar người xem / người donate luôn giữ ảnh thật */
 body.pixel img.av, body.pixel .wrow img { image-rendering: auto; }
 body.pixel .board { border-radius: 0; border: 4px solid #f6c64e; padding: 10px 12px;
@@ -129,22 +124,7 @@ body.pixel .crow { text-shadow: 2px 2px 0 #000; }
 body.pixel #titleBar { color: #ffe066; text-shadow: 3px 3px 0 #5a1e00, -2px 0 0 #3a1400, 2px 0 0 #3a1400, 0 -2px 0 #3a1400; }
 body.pixel #liveinfo { border-radius: 0; border: 3px solid #f6c64e; background: rgba(24,12,52,.75); box-shadow: 4px 4px 0 rgba(0,0,0,.6); text-shadow: 2px 2px 0 #000; }
 body.pixel #liveinfo .lv-dot { border-radius: 0; box-shadow: none; }
-/* thẻ donate 8-bit */
-body.pixel .dc-rays { background: repeating-conic-gradient(from 0deg, rgba(255,226,90,.45) 0 7.5deg, rgba(255,226,90,0) 7.5deg 15deg); -webkit-mask-image: radial-gradient(circle, #000 0, rgba(0,0,0,.6) 30%, transparent 62%); animation: spin 24s steps(48) infinite; }
-body.pixel .dc-glow { border-radius: 0; background: radial-gradient(circle, rgba(255,240,150,.7) 0 18%, rgba(255,200,60,.35) 18% 36%, rgba(255,170,40,.15) 36% 54%, transparent 54%); animation: pulse 2s steps(4) infinite; }
-body.pixel .dc-frame .fr { filter: drop-shadow(4px 4px 0 rgba(0,0,0,.6)); }
-body.pixel .dc-info { border-radius: 0; background: rgba(24,12,52,.82); border: 3px solid #f6c64e; box-shadow: 4px 4px 0 rgba(0,0,0,.6); padding: 6px 22px 8px; }
-body.pixel .dc-name { font-weight: 400; text-shadow: 3px 3px 0 #5a1e00, -2px 0 0 #3a1400, 2px 0 0 #3a1400, 0 -2px 0 #3a1400; }
-body.pixel .dc-tier, body.pixel .dc-gift { text-shadow: 2px 2px 0 #000; }
-body.pixel .dc-fortune { border-radius: 0; border: 4px solid #f6c64e; background: rgba(120,16,24,var(--fop)); box-shadow: 0 0 0 4px #3a0a00, 6px 6px 0 4px rgba(0,0,0,.6); }
-body.pixel .dc-fortune::before { border-radius: 0; border: 2px dashed rgba(255,214,110,.7); }
-body.pixel .ft-level { border-radius: 0; box-shadow: 2px 2px 0 #3a0a00; }
-body.pixel .ft-verse { text-shadow: 2px 2px 0 #300; }
-body.pixel .ft-title { text-shadow: 2px 2px 0 #300; }
-/* avatar treo 8-bit: nhấp nhô theo bậc */
-body.pixel .gitem .gbob { animation: gbob 3.2s steps(6) infinite; }
-body.pixel .gitem .gframe { filter: drop-shadow(3px 3px 0 rgba(0,0,0,.55)); }
-body.pixel .gitem .gname { font-weight: 400; text-shadow: 2px 2px 0 #000, -1px 0 0 #000; }
-body.pixel .gitem.gone { filter: none; transform: scale(1.4) !important; opacity: 0; transition: opacity 1.2s steps(6), transform 1.2s steps(6); }
 body.pixel #camwrap { border-radius: 0; border: 4px solid #f6c64e; box-shadow: 0 0 0 4px #3a1400, 6px 6px 0 4px rgba(0,0,0,.5); }
 body.pixel #camwrap video { image-rendering: pixelated; }
+/* thẻ donate & avatar treo giữ kiểu thường */
+body.pixel #cardLayer, body.pixel #gallery { font-family: 'Noto Serif', serif; }
