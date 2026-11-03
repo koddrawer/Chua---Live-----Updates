@@ -274,6 +274,7 @@
     "voice": "",
     "thanksVoice": "",
     "sermonRef": "",
-    "thanksRef": ""
+    "thanksRef": "",
+    "strict": true
   }
 }

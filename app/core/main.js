@@ -444,6 +444,10 @@ async function tts(text, o = {}) {
   if (engine === 'off' || engine === 'system') return null;
   if (engine === 'vieneu') {
     try { return await ttsVieneu(text, o); } catch (e) { ttsErr('VieNeu', e); }
+    if (vnCfg().strict !== false) { // giữ đúng một giọng: chờ VieNeu sẵn sàng rồi thử lại, không chuyển sang giọng khác
+      for (let k = 0; k < 30 && vn.status !== 'ready'; k++) await new Promise(r => setTimeout(r, 1000));
+      return await ttsVieneu(text, o);
+    }
     try { return await ttsEdge(text, o); } catch (e) { ttsErr('Microsoft', e); }
     try { return await ttsGoogle(text, o); } catch (e) { ttsErr('Google', e); throw e; }
   }

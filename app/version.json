@@ -1,4 +1,4 @@
 {
-  "version": "1.0.22",
-  "notes": "VieNeu: ghi nhớ đúng Python đã cài, tự dò lại khi báo 'No module named vieneu', hiện đường dẫn Python khi lỗi"
+  "version": "1.0.23",
+  "notes": "Sửa lẫn giọng: đổi giọng không dùng lại âm thanh cũ, chế độ chỉ dùng giọng VieNeu, không tự rơi về giọng Windows"
 }

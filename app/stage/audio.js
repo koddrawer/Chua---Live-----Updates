@@ -42,8 +42,11 @@
 
   // ---------- TTS ----------
   const blobCache = new Map();
+  // chữ ký cài đặt giọng: đổi bộ đọc/giọng VieNeu thì không dùng lại âm thanh cũ (tránh lẫn giọng)
+  function voiceSig() { const v = (cfg && cfg.vieneu) || {}; return [cfg && cfg.voice.engine, v.voice, v.thanksVoice, v.sermonRef, v.thanksRef].join('~'); }
+  let lastSig = null;
   async function getVoiceURL(text, voice, rate, pitch) {
-    const key = voice + '|' + rate + '|' + pitch + '|' + text;
+    const key = voiceSig() + '|' + voice + '|' + rate + '|' + pitch + '|' + text;
     if (blobCache.has(key)) return blobCache.get(key);
     const p = (async () => {
       const r = await window.api.tts(text, { voice, rate, pitch });
@@ -71,7 +74,7 @@
         el.onended = () => resolve('end'); el.onerror = () => resolve('err');
         ctl.audio = el;
         el.play().catch(() => resolve('err'));
-      } else if (window.speechSynthesis && viVoice) {
+      } else if (window.speechSynthesis && viVoice && cfg.voice.engine === 'system') { // chỉ dùng giọng Windows khi chọn đúng bộ đọc đó, tránh lẫn giọng
         const u = new SpeechSynthesisUtterance(text); u.voice = viVoice; u.lang = viVoice.lang; u.rate = 1 + rate / 100; u.volume = volume;
         u.onend = () => resolve('end'); u.onerror = () => resolve('err');
         ctl.synth = true; speechSynthesis.speak(u);
@@ -191,8 +194,10 @@
     playMusic(false);
   };
   A.update = function (c, mlist, serm) {
+    const sigBefore = voiceSig();
     const musicChanged = mlist && JSON.stringify(mlist.map(m => m.id)) !== JSON.stringify(musicList.map(m => m.id));
     cfg = c; if (mlist) musicList = mlist;
+    if (voiceSig() !== sigBefore) { blobCache.forEach(p => p.then(u => URL.revokeObjectURL(u)).catch(() => {})); blobCache.clear(); }
     if (serm) { const changed = JSON.stringify(serm) !== JSON.stringify(sermons); sermons = serm; if (changed && S.sec >= sermons.length) { S.sec = 0; S.line = -1; } }
     if (musicChanged || !musicStarted || (cfg.music.enabled === music.paused)) playMusic(false);
     if (!cfg.music.enabled) music.pause();
