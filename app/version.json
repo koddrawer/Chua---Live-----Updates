@@ -1,4 +1,4 @@
 {
-  "version": "1.0.24",
-  "notes": "Khung donate, thẻ chúc phúc và avatar treo giữ kiểu thường (không 8-bit)"
+  "version": "1.0.25",
+  "notes": "Chế độ thả tim: người xem đứng ở chân thang, thả tim mới đi lên (mỗi tim = bước), đứng yên 10 giây thì biến mất, tim bay cạnh tên + bộ đếm; dòng chữ dưới cùng nhiều dòng, chỉnh cỡ chữ"
 }

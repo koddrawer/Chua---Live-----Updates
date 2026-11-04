@@ -309,6 +309,11 @@ $('#btnNextBg').onclick = () => window.api.stageCmd({ type: 'bg-next' });
 
 $('#btnGalleryClear').onclick = () => window.api.stageCmd({ type: 'gallery-clear' });
 
+const joinedRecent = [];
+$('#simLike').onclick = () => { const u = lastJoined || fakeUser(''); window.api.simulate({ type: 'like', user: u, count: 10, total: 0 }); };
+$('#simLikeAll').onclick = () => { joinedRecent.slice(-20).forEach((u, i) => setTimeout(() => window.api.simulate({ type: 'like', user: u, count: 1 + Math.floor(Math.random() * 15), total: 0 }), i * 150)); };
+window.api.on('live-event', ev => { if (ev.type === 'join' && ev.user) { joinedRecent.push(ev.user); if (joinedRecent.length > 50) joinedRecent.shift(); } });
+
 // ---------- Tương tác LIVE ----------
 $('#btnTestChat').onclick = () => { const t = $('#testChat').value.trim(); if (!t) return; window.api.simulate({ type: 'chat', user: fakeUser($('#simName') && $('#simName').value.trim()), text: t }); };
 async function scanCams() {

@@ -141,6 +141,20 @@ function laneFree(y) {
   }
   return best;
 }
+// ---------- Chế độ thả tim: người xem đứng ở chân thang, mỗi tim = bước đi ----------
+const heartMode = () => !cfg || cfg.scene.heartMode !== false;
+const isHeartChar = c => heartMode() && c.user && c.kind !== 'idle';
+const pendingHearts = new Map();
+function addHearts(c, n) {
+  n = Math.max(1, Math.round(n || 1));
+  c.hearts = (c.hearts || 0) + n;
+  c.stepsLeft = (c.stepsLeft || 0) + n * (cfg.scene.stepsPerHeart || 1);
+  c.lastActive = now;
+  const shown = Math.min(n, 30);
+  for (let i = 0; i < shown; i++) c.heartPops.push({ t: -i * 0.12, dx: (Math.random() - 0.5) * 10 });
+  if (c.mode === 'stand') { c.mode = 'walk'; c.stepT = 0; }
+}
+function standStart(c) { c.mode = 'stand'; c.stepT = 0; c.lastActive = c.lastActive || now; const w = animFrames(c.pack, 'walk_up'); setFrame(c, w.frames[0], w.flip); }
 function spawn(opts = {}) {
   const p = pickPack(); if (!p) return null;
   const y = opts.y ?? EMERGE_Y;
@@ -150,9 +164,11 @@ function spawn(opts = {}) {
     frame: animFrames(p, 'walk_up').frames[0], prev: null, xf: 1, flip: false, alpha: 0,
     born: now, nameUntil: opts.user ? now + cfg.scene.nameSeconds : 0, blessed: false,
     timeline: null, tlI: 0, tlT: 0, aura: 0, auraOn: false, pendingKneel: 0, side: null, removing: false,
+    hearts: 0, stepsLeft: 0, lastActive: now, heartPops: [],
   };
   chars.push(c);
   if (c.user) byUser.set(c.user.id, c);
+  if (isHeartChar(c)) { c.nameUntil = Infinity; const ph = pendingHearts.get(c.user.id); if (ph) { pendingHearts.delete(c.user.id); addHearts(c, ph); } }
   return c;
 }
 function setFrame(c, f, flip = false) {
@@ -175,7 +191,7 @@ function kneel(c, rounds) {
     const extra = []; for (let i = 0; i < rounds; i++) extra.push({ anim: 'prostrate', dur: 1.15, on: cc => burst(cc, 18) }, { anim: 'kneel', dur: 0.85 });
     c.timeline.splice(c.timeline.length - 1, 0, ...extra); return;
   }
-  startTimeline(c, kneelTimeline(rounds), cc => { cc.mode = 'walk'; cc.sinceBow = 0; });
+  startTimeline(c, kneelTimeline(rounds), cc => { cc.mode = 'walk'; cc.sinceBow = 0; cc.lastActive = now; });
 }
 function vanish(c) { if (c.removing) return; c.removing = true; c.mode = 'vanish'; c.t = 0; burst(c, 26, true); }
 function blessText(c) {
@@ -192,6 +208,7 @@ function charX(c) { const s = stairAt(c.y); return s.c + c.u * s.hw; }
 
 function updateChar(c, dt) {
   c.t += dt; c.xf = Math.min(1, c.xf + dt / 0.22);
+  if (c.heartPops && c.heartPops.length) { for (const p of c.heartPops) p.t += dt; c.heartPops = c.heartPops.filter(p => p.t < 1.3); }
   if (c.auraOn) c.aura = Math.min(1, c.aura + dt / 0.6); else c.aura = Math.max(0, c.aura - dt / 1.2);
   if (c.auraOn && Math.random() < dt * 14) particles.push(auraParticle(c));
   const s = cfg.scene;
@@ -216,12 +233,14 @@ function updateChar(c, dt) {
     case 'emerge': {
       c.alpha = Math.min(1, c.alpha + dt / 1.2);
       walkStep();
-      if (c.y <= START_Y) { c.mode = 'walk'; c.sinceBow = 0; if (c.pendingKneel) { const r = c.pendingKneel; c.pendingKneel = 0; kneel(c, r); } }
+      if (c.y <= START_Y) { c.mode = 'walk'; c.sinceBow = 0; c.lastActive = now; if (isHeartChar(c) && !(c.stepsLeft > 0)) standStart(c); if (c.pendingKneel) { const r = c.pendingKneel; c.pendingKneel = 0; kneel(c, r); } }
       break;
     }
     case 'walk': {
       c.alpha = Math.min(1, c.alpha + dt / 0.5);
+      if (isHeartChar(c) && !(c.stepsLeft > 0)) { standStart(c); break; }
       if (walkStep()) {
+        if (isHeartChar(c)) c.stepsLeft--;
         c.sinceBow++;
         if (c.y <= DOOR_Y + 2) { blessText(c); vanish(c); break; }
         if (c.sinceBow >= s.stepsPerBow) {
@@ -230,6 +249,13 @@ function updateChar(c, dt) {
         }
       }
       if (c.y <= DOOR_Y) { blessText(c); vanish(c); }
+      break;
+    }
+    case 'stand': {
+      c.alpha = Math.min(1, c.alpha + dt / 0.5);
+      if (!isHeartChar(c)) { c.mode = 'walk'; break; }
+      if (c.stepsLeft > 0) { c.mode = 'walk'; break; }
+      if (now - c.lastActive > (cfg.scene.idleVanishSeconds ?? 10)) vanish(c); // đứng yên quá lâu -> biến mất
       break;
     }
     case 'side': {
@@ -366,7 +392,33 @@ function drawName(c) {
     ctx.lineJoin = 'round'; ctx.lineWidth = fs * 0.28; ctx.strokeStyle = 'rgba(40,18,0,.9)'; ctx.strokeText(txt, x, y);
     ctx.fillStyle = col; ctx.fillText(txt, x, y);
   }
+  // tim bay lên cạnh tên: mỗi lượt thả tim = 1 icon
+  if (c.heartPops && c.heartPops.length) {
+    const tw = ctx.measureText(txt).width;
+    const hx = x + tw / 2 + 10, hy = y - (isPixel() ? 9 : fs * 0.55);
+    for (const p of c.heartPops) {
+      if (p.t < 0) continue;
+      const k = p.t / 1.3; const a = k < 0.15 ? k / 0.15 : Math.max(0, 1 - (k - 0.15) / 0.85);
+      ctx.globalAlpha = Math.min(ctx.globalAlpha || 1, 1) * 0 + a * Math.min(1, c.alpha);
+      drawHeart(hx + p.dx + Math.sin(p.t * 6) * 3, hy - k * 34, isPixel() ? 2 : 1.8);
+    }
+  }
+  if (isHeartChar(c) && c.hearts > 0) { // bộ đếm tim
+    ctx.globalAlpha = Math.min(1, c.alpha);
+    const tw = ctx.measureText(txt).width; const cx0 = x - tw / 2 - 12;
+    drawHeart(cx0 - 6, y - (isPixel() ? 9 : fs * 0.5), isPixel() ? 1.5 : 1.3);
+    if (isPixel()) pixelText(String(c.hearts), cx0 - 22, y, 16, '#ff9ab8', '#2a1030');
+    else { ctx.font = `700 ${Math.round(fs * 0.85)}px 'Noto Serif', serif`; ctx.textAlign = 'right'; ctx.lineWidth = fs * 0.25; ctx.strokeStyle = 'rgba(40,0,10,.9)'; ctx.strokeText(String(c.hearts), cx0 - 14, y); ctx.fillStyle = '#ff9ab8'; ctx.fillText(String(c.hearts), cx0 - 14, y); ctx.textAlign = 'center'; }
+  }
   ctx.globalAlpha = 1;
+}
+// trái tim pixel 7x6 (s = cỡ 1 ô)
+const HEART = ['0110110', '1111111', '1111111', '0111110', '0011100', '0001000'];
+function drawHeart(cx, cy, s) {
+  const ox = cx - 3.5 * s, oy = cy - 3 * s;
+  ctx.fillStyle = '#4a0018';
+  for (let r = 0; r < 6; r++) for (let q = 0; q < 7; q++) if (HEART[r][q] === '1') ctx.fillRect(ox + q * s - s * 0.5, oy + r * s - s * 0.5, s * 2, s * 2);
+  for (let r = 0; r < 6; r++) for (let q = 0; q < 7; q++) if (HEART[r][q] === '1') { ctx.fillStyle = (r === 1 && q === 1) || (r === 1 && q === 2) ? '#ffd0dc' : '#ff3d6e'; ctx.fillRect(ox + q * s, oy + r * s, s, s); }
 }
 // chữ kiểu 8-bit: font pixel + viền vuông 4 hướng
 function pixelText(txt, x, y, size, fill, outline) {
@@ -740,6 +792,15 @@ function onJoin(u, src) {
   if (joinQueue.length > 300) { stats.dropped += joinQueue.length - 300; joinQueue.splice(0, joinQueue.length - 300); }
   if (src === 'join') { AudioMgr.sfx('chime'); if (cfg.voice.greetEnabled) AudioMgr.say(fill(cfg.voice.greetTemplate, { name: voiceName(u.nickname) }), { low: true }); }
 }
+function onHearts(u, n) {
+  if (!u || !u.id) return;
+  const c = byUser.get(u.id);
+  if (c && !c.removing) { addHearts(c, n); return; }
+  pendingHearts.set(u.id, (pendingHearts.get(u.id) || 0) + Math.max(1, n));
+  if (pendingHearts.size > 500) pendingHearts.delete(pendingHearts.keys().next().value);
+  recentJoin.delete(u.id); // thả tim thì luôn cho lên lại
+  onJoin(u, 'like');
+}
 function tierFor(coins) { const ts = (cfg.tiers || []).slice().sort((a, b) => a.min - b.min); let t = ts[0]; for (const x of ts) if (coins >= x.min) t = x; return t; }
 function onGift(ev) {
   const u = ev.user; if (!u || !u.id) return;
@@ -992,7 +1053,11 @@ function applyLayout() {
     el.classList.toggle('blur', o.blur !== false && o.opacity > 0.02);
   }
   const tb = document.getElementById('titleBar');
-  tb.textContent = L.title.text || ''; tb.style.top = L.title.y + 'px'; tb.style.display = L.title.show && L.title.text ? '' : 'none';
+  tb.textContent = L.title.text || '';
+  let tsz = L.title.size || 30; if (isPixel()) tsz = Math.max(16, Math.round(tsz / 8) * 8); // font pixel nét hơn ở bội số 8
+  tb.style.fontSize = tsz + 'px';
+  if (L.title.bottom != null) { tb.style.top = 'auto'; tb.style.bottom = L.title.bottom + 'px'; } else { tb.style.bottom = 'auto'; tb.style.top = L.title.y + 'px'; }
+  tb.style.display = L.title.show && L.title.text ? '' : 'none';
   slots.forEach(sl => sl.el.playbackRate = cfg.scene.videoRate || 1);
 }
 let editMode = false;
@@ -1062,6 +1127,7 @@ async function main() {
       stats[ev.type === 'join' ? 'joins' : ev.type === 'chat' ? 'chats' : ev.type === 'gift' ? 'gifts' : 'likes']++;
       if (ev.type === 'join') onJoin(ev.user, 'join');
       else if (ev.type === 'chat' && cfg.scene.joinOnChat) onJoin(ev.user, 'chat');
+      else if (ev.type === 'like' && heartMode()) onHearts(ev.user, ev.count || 1);
       else if ((ev.type === 'like' || ev.type === 'follow' || ev.type === 'share') && cfg.scene.joinOnLike) onJoin(ev.user, 'like');
       else if (ev.type === 'gift') onGift(ev);
     } catch (e) { window.api.log('Lỗi stage: ' + e.message, 'error'); }

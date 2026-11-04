@@ -74,6 +74,7 @@
         <button id="simJoin5">+5 người</button>
         <button id="simJoin20">+20 người</button>
         <button id="simChat">+1 bình luận</button>
+        <button id="simLike">❤ Người vừa vào thả 10 tim</button><button id="simLikeAll">❤ Tất cả thả tim</button>
       </div>
       <label>Tên tuỳ chọn<input id="simName" placeholder="để trống = tên ngẫu nhiên"></label>
     </div>
@@ -103,6 +104,13 @@
       <label class="chk"><input type="checkbox" data-k="scene.joinOnChat"> Người bình luận cũng xuất hiện</label>
       <label class="chk"><input type="checkbox" data-k="scene.joinOnLike"> Người thả tim / follow / share cũng xuất hiện</label>
       <label>Không cho xuất hiện lại trong (giây)<input type="number" data-k="scene.rejoinCooldown"></label>
+    </div>
+    <div class="card">
+      <h3>Chế độ thả tim</h3>
+      <label class="chk"><input type="checkbox" data-k="scene.heartMode"> Người xem đứng ở chân thang, chỉ đi lên khi thả tim</label>
+      <label>Số bước mỗi tim<input type="number" min="0.1" step="0.1" data-k="scene.stepsPerHeart"></label>
+      <label>Đứng yên bao lâu thì biến mất (giây)<input type="number" min="1" data-k="scene.idleVanishSeconds"></label>
+      <p class="muted small">Leo hết bậc cần khoảng 45 bước (tuỳ "Thời gian leo"). Mỗi lượt thả tim hiện trái tim nhỏ cạnh tên, kèm bộ đếm tổng tim.</p>
     </div>
     <div class="card">
       <h3>Leo bậc thang</h3>
@@ -376,8 +384,10 @@
       </div></div>
     <div class="card"><h3>Dòng chữ dưới cùng</h3>
       <label class="chk"><input type="checkbox" data-k="layout.title.show"> Hiện</label>
-      <label>Nội dung<input data-k="layout.title.text"></label>
-      <label>Vị trí Y<input type="number" data-k="layout.title.y"></label></div>
+      <label>Nội dung (nhiều dòng — Enter để xuống dòng, dùng để ghi hướng dẫn)<textarea rows="4" data-k="layout.title.text"></textarea></label>
+      <div class="grid2"><label>Cỡ chữ<input type="number" min="10" max="64" data-k="layout.title.size"></label>
+      <label>Cách đáy màn hình (px)<input type="number" data-k="layout.title.bottom"></label></div>
+      <p class="muted small">Ở giao diện 8-bit, cỡ chữ được làm tròn về bội số của 8 (16, 24, 32…) cho nét. Nhớ dời "Thanh LIVE" (tab Tương tác LIVE) lên nếu bị chữ che.</p></div>
   </div>
   <div class="row"><button id="resetLayout">Khôi phục bố cục mặc định</button></div>
 </section>
@@ -399,7 +409,7 @@
       <div class="grid2">
         <label class="chk"><input type="checkbox" data-k="layout.liveinfo.clock"> Đồng hồ</label><label class="chk"><input type="checkbox" data-k="layout.liveinfo.date"> Ngày tháng</label>
         <label class="chk"><input type="checkbox" data-k="layout.liveinfo.viewers"> Số người xem</label><label class="chk"><input type="checkbox" data-k="layout.liveinfo.likes"> Số tim</label>
-        <label>Vị trí Y<input type="number" data-k="layout.liveinfo.y"></label><label>Cỡ chữ<input type="number" data-k="layout.liveinfo.font"></label>
+        <label class="chk"><input type="checkbox" data-k="layout.liveinfo.auto"> Tự đặt ngay trên dòng chữ dưới cùng</label><label>Vị trí Y<input type="number" data-k="layout.liveinfo.y"></label><label>Cỡ chữ<input type="number" data-k="layout.liveinfo.font"></label>
       </div>
     </div>
     <div class="card">

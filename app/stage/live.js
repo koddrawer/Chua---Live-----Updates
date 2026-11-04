@@ -100,6 +100,9 @@ window.LiveExtra = (function () {
     chatEl.classList.toggle('blur', lc.blur !== false && (lc.opacity ?? 0.5) > 0.02);
     const li = C().layout.liveinfo || {};
     Object.assign(infoEl.style, { top: (li.y ?? 1192) + 'px', fontSize: (li.font ?? 16) + 'px' });
+    // tự đặt ngay trên dòng chữ dưới cùng (dòng chữ có thể nhiều dòng)
+    const placeInfo = () => { const tb = document.getElementById('titleBar'); if (li.auto !== false && tb && tb.style.display !== 'none' && tb.offsetHeight) infoEl.style.top = Math.max(0, tb.offsetTop - infoEl.offsetHeight - 8) + 'px'; };
+    placeInfo(); requestAnimationFrame(placeInfo); setTimeout(placeInfo, 300);
     tickInfo(); applyCam();
   };
   L.onEvent = function (ev) {

@@ -30,7 +30,7 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; user-s
 .wrow .wn b { color: var(--gold); }
 @keyframes wIn { from { transform: translateX(30px); opacity: 0; } to { transform: none; opacity: 1; } }
 
-#titleBar { position: absolute; left: 0; right: 0; text-align: center; font-family: 'Dancing Script', 'Noto Serif', serif; font-weight: 700; font-size: 30px; color: #ffe4a3;
+#titleBar { position: absolute; left: 12px; right: 12px; text-align: center; white-space: pre-line; line-height: 1.25; font-family: 'Dancing Script', 'Noto Serif', serif; font-weight: 700; font-size: 30px; color: #ffe4a3;
   text-shadow: 0 0 14px rgba(255,170,60,.95), 0 2px 3px #000; }
 
 #cardLayer { position: absolute; inset: 0; }
@@ -103,7 +103,6 @@ body.edit #chat, body.edit #camwrap { pointer-events: auto; cursor: move; outlin
 body.pixel #ui, body.pixel #ui *:not(#cardLayer, #cardLayer *, #gallery, #gallery *) { font-family: 'PixelVN', monospace !important; font-style: normal !important; font-weight: 400 !important; letter-spacing: 0 !important; }
 /* font pixel nét nhất ở cỡ 16 / 32 px */
 body.pixel .board { font-size: 16px !important; }
-body.pixel #titleBar { font-size: 32px !important; }
 body.pixel #liveinfo { font-size: 16px !important; }
 body.pixel img:not(#cardLayer img):not(#gallery img) { image-rendering: pixelated; }
 /* avatar người xem / người donate luôn giữ ảnh thật */
