@@ -265,23 +265,24 @@ function updateChar(c, dt) {
     case 'walk': {
       c.alpha = Math.min(1, c.alpha + dt / 0.5);
       if (isHeartChar(c) && !(c.stepsLeft > 0)) { standStart(c); break; }
+      if (c.donorPending && c.y <= DOOR_Y + 30) { const w = animFrames(c.pack, 'walk_up'); setFrame(c, w.frames[0], w.flip); break; } // chờ lượt donate ở trước cửa
       if (walkStep()) {
         if (isHeartChar(c)) c.stepsLeft--;
         c.sinceBow++;
-        if (c.y <= DOOR_Y + 2) { blessText(c); vanish(c); break; }
+        if (c.y <= DOOR_Y + 2 && !c.donorPending) { blessText(c); vanish(c); break; }
         if (c.sinceBow >= s.stepsPerBow) {
           c.sinceBow = 0;
           startTimeline(c, bowTimeline(), cc => { cc.mode = 'walk'; maybeSide(cc); });
         }
       }
-      if (c.y <= DOOR_Y) { blessText(c); vanish(c); }
+      if (c.y <= DOOR_Y && !c.donorPending) { blessText(c); vanish(c); }
       break;
     }
     case 'stand': {
       c.alpha = Math.min(1, c.alpha + dt / 0.5);
       if (!isHeartChar(c)) { c.mode = 'walk'; break; }
       if (c.stepsLeft > 0) { c.mode = 'walk'; break; }
-      if (now - c.lastActive > (cfg.scene.idleVanishSeconds ?? 10)) vanish(c); // đứng yên quá lâu -> biến mất
+      if (!c.donorPending && now - c.lastActive > (cfg.scene.idleVanishSeconds ?? 10)) vanish(c); // đứng yên quá lâu -> biến mất
       break;
     }
     case 'side': {
@@ -870,7 +871,7 @@ function onGift(ev) {
     c = spawn({ kind: 'donor', user: u, y: 1240 });
     if (!c) return;
   }
-  c.kind = 'donor';
+  c.kind = 'donor'; c.donorPending = true;
   c.nameUntil = Math.max(c.nameUntil, now + cfg.scene.nameSeconds);
   donorQueue.push({ user: u, c, coins, gift: ev.giftName, repeat: ev.repeat || 1, tier });
   pumpDonors();
@@ -883,7 +884,15 @@ async function pumpDonors() {
   donorBusy = true;
   try {
     const d = donorQueue.shift();
-    const c = d.c; const tier = d.tier;
+    let c = d.c; const tier = d.tier;
+    // nhân vật đã biến mất trong lúc chờ lượt -> gọi lại một nhân vật mới cho người donate
+    if (!c || c.dead || c.removing || !chars.includes(c)) {
+      const cur = byUser.get(d.user.id);
+      c = (cur && !cur.dead && !cur.removing) ? cur : spawn({ kind: 'donor', user: d.user, y: 1240 });
+      if (!c) throw new Error('không tạo được nhân vật');
+      c.kind = 'donor'; c.nameUntil = Math.max(c.nameUntil || 0, now + cfg.scene.nameSeconds);
+    }
+    c.donorPending = true;
     const rounds = tier.kneelRounds ?? cfg.scene.kneelRounds;
     kneel(c, rounds);
     // chuẩn bị nội dung & giọng đọc ngay để không bị trễ
@@ -895,10 +904,11 @@ async function pumpDonors() {
     AudioMgr.prefetchThanks(voiceText);
     const avP = d.user.avatar ? window.api.avatar(d.user.avatars && d.user.avatars.length ? d.user.avatars : d.user.avatar) : Promise.resolve(null);
     // chờ nhân vật quỳ xuống
-    const t0 = now; await waitUntil(() => (c.mode === 'action' && c.auraOn) || c.dead || now - t0 > 6);
+    const t0 = now; await waitUntil(() => (c.mode === 'action' && c.auraOn) || c.dead || now - t0 > 9);
     if (!c.dead) await camFocus(c);
     const av = await avP;
-    const lift = ((cfg.donate && cfg.donate.style) || 'lift') === 'lift' && !c.dead;
+    const liftMode = ((cfg.donate && cfg.donate.style) || 'lift') === 'lift';
+    const lift = liftMode && !c.dead;
     // avatar nhỏ cạnh tên trên đầu nhân vật
     c.avatarImg = new Image(); c.avatarImg.referrerPolicy = 'no-referrer'; c.avatarImg.onerror = () => { c.avatarImg.onerror = null; c.avatarImg.src = defaultAvatar(d.user.nickname); }; c.avatarImg.src = av || defaultAvatar(d.user.nickname);
     if (lift) { // nhân vật đang quỳ lạy bay lên giữa màn hình, toả hào quang
@@ -906,7 +916,7 @@ async function pumpDonors() {
       const t1 = now; await waitUntil(() => !c.lift || c.lift.phase === 'hold' || c.dead || now - t1 > 5);
     }
     if ((cfg.layout.card.delay || 0) > 0) await sleep(cfg.layout.card.delay * 1000);
-    if (!previewHold) showCard({ user: d.user, tier, fortune, gift, coins: d.coins, avatar: av, noFrame: lift });
+    if (!previewHold) showCard({ user: d.user, tier, fortune, gift, coins: d.coins, avatar: av, noFrame: liftMode });
     const voiceP = AudioMgr.say(voiceText);
     const secs = (tier.cardSeconds > 0 ? tier.cardSeconds : cfg.scene.cardSeconds);
     await Promise.all([voiceP, sleep(secs * 1000)]);
@@ -915,6 +925,7 @@ async function pumpDonors() {
     if (!previewHold) hideCard();
     addToGallery({ user: d.user, tier, avatar: av, from: fromRect });
     if (lift) { c.holdKneel = false; endLift(c); c.auraBoost = 1; const t2 = now; await waitUntil(() => !c.lift || c.dead || now - t2 > 4); }
+    c.donorPending = false; c.lastActive = now;
     await sleep(700);
   } catch (e) { window.api.log('Lỗi donate: ' + e.message, 'error'); }
   donorBusy = false;
