@@ -127,3 +127,5 @@ body.pixel #camwrap { border-radius: 0; border: 4px solid #f6c64e; box-shadow: 0
 body.pixel #camwrap video { image-rendering: pixelated; }
 /* thẻ donate & avatar treo giữ kiểu thường */
 body.pixel #cardLayer, body.pixel #gallery { font-family: 'Noto Serif', serif; }
+
+.ft-sub { font-size: 17px; color: #fff3d0; margin-bottom: 6px; text-shadow: 0 1px 2px #300; }

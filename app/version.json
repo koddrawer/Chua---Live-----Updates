@@ -1,4 +1,4 @@
 {
-  "version": "1.0.25",
-  "notes": "Chế độ thả tim: người xem đứng ở chân thang, thả tim mới đi lên (mỗi tim = bước), đứng yên 10 giây thì biến mất, tim bay cạnh tên + bộ đếm; dòng chữ dưới cùng nhiều dòng, chỉnh cỡ chữ"
+  "version": "1.0.26",
+  "notes": "Donate: nhân vật quỳ lạy bay lên giữa màn hình, toả vầng hào quang + khung quẻ (bỏ khung avatar); tên + avatar nhỏ trên đầu, xong thì về lại bậc thang"
 }

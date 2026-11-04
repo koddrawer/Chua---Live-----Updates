@@ -184,7 +184,7 @@
     "fortune": {
       "show": true,
       "x": 360,
-      "y": 725,
+      "y": 790,
       "w": 540,
       "scale": 1.0,
       "opacity": 0.92,
@@ -282,5 +282,12 @@
     "sermonRef": "",
     "thanksRef": "",
     "strict": true
+  },
+  "donate": {
+    "style": "lift",
+    "liftHeight": 300,
+    "liftY": 760,
+    "liftX": 360,
+    "liftSeconds": 1.4
   }
 }

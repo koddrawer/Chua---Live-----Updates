@@ -200,6 +200,11 @@
   <div class="card">
     <h3>Thẻ avatar donate <span class="muted small">— bật “Giữ thẻ” rồi chỉnh, màn hình LIVE cập nhật ngay. Ở tab Bố cục bật kéo-thả để kéo avatar/ô quẻ, lăn chuột để phóng to/thu nhỏ</span></h3>
     <div class="row"><label class="chk"><input type="checkbox" id="cardHold"> Giữ thẻ xem thử trên màn hình</label><select id="cardHoldTier"></select></div>
+    <div class="grid3" style="margin-bottom:8px">
+      <label>Kiểu hiển thị khi donate<select data-k="donate.style"><option value="lift">Nhân vật quỳ lạy bay lên giữa màn hình + khung quẻ</option><option value="card">Thẻ avatar + khung trang trí + khung quẻ (kiểu cũ)</option></select></label>
+      <label>Chiều cao nhân vật khi bay lên (px)<input type="number" data-k="donate.liftHeight"></label>
+      <label>Vị trí chân nhân vật (Y) · tâm (X)<span class="row"><input type="number" data-k="donate.liftY" style="width:90px"><input type="number" data-k="donate.liftX" style="width:90px"></span></label>
+    </div>
     <div class="grid3">
       <div>
         <h3>Thời gian</h3>

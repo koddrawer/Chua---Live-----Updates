@@ -198,16 +198,42 @@ function blessText(c) {
   if (c.blessed || !c.user) return; c.blessed = true;
   const list = (content.blessings && content.blessings.length) ? content.blessings : ['Chúc {name} bình an'];
   const txt = list[Math.floor(Math.random() * list.length)].replace(/\{name\}/g, c.name);
-  const h = charHeightAt(c.y);
-  let y = c.y - h - 18;
+  const h = cH(c);
+  let y = cY(c) - h - 18;
   for (let k = 0; k < 6 && floats.some(f => f.t < f.dur * 0.6 && Math.abs(f.y - y) < 32); k++) y -= 32;
   floats.push({ text: txt, x: charX(c), y, t: 0, dur: cfg.scene.blessingSeconds });
   if (floats.length > 6) floats.splice(0, floats.length - 6);
 }
-function charX(c) { const s = stairAt(c.y); return s.c + c.u * s.hw; }
+// ---------- Người donate bay lên giữa màn hình ----------
+const easeIO = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+function liftTarget(c) {
+  const D = cfg.donate || {}; const F = cfg.layout.fortune || {};
+  const h = D.liftHeight || 300;
+  const feet = Math.min(D.liftY || 760, (F.show !== false ? (F.y ?? 725) : 1100) - 24);
+  return { x: D.liftX || W / 2, y: feet, h };
+}
+function startLift(c) {
+  const from = { x: charX(c), y: c.y, h: charHeightAt(c.y) };
+  c.lift = { x: from.x, y: from.y, h: from.h, from, to: liftTarget(c), t: 0, phase: 'up', dur: (cfg.donate && cfg.donate.liftSeconds) || 1.4 };
+  burst(c, 30, true);
+}
+function endLift(c) { if (!c.lift) return; c.lift.phase = 'down'; c.lift.t = 0; c.lift.from = { x: c.lift.x, y: c.lift.y, h: c.lift.h }; }
+function updateLift(c, dt) {
+  const L = c.lift; L.t += dt;
+  if (L.phase === 'hold') { L.to = liftTarget(c); L.x = L.to.x; L.y = L.to.y + Math.sin(now * 1.6) * 6; L.h = L.to.h; return; }
+  const back = { x: (() => { const s = stairAt(c.y); return s.c + c.u * s.hw; })(), y: c.y, h: charHeightAt(c.y) };
+  const k = easeIO(Math.min(1, L.t / L.dur));
+  const A = L.from, B = L.phase === 'up' ? L.to : back;
+  L.x = A.x + (B.x - A.x) * k; L.y = A.y + (B.y - A.y) * k - Math.sin(k * Math.PI) * 60; L.h = A.h + (B.h - A.h) * k;
+  if (k >= 1) { if (L.phase === 'up') { L.phase = 'hold'; } else { c.lift = null; c.holdKneel = false; } }
+}
+function charX(c) { if (c.lift) return c.lift.x; const s = stairAt(c.y); return s.c + c.u * s.hw; }
+const cY = c => c.lift ? c.lift.y : c.y;            // vị trí vẽ (khi bay lên giữa màn hình)
+const cH = c => c.lift ? c.lift.h : charHeightAt(c.y);
 
 function updateChar(c, dt) {
   c.t += dt; c.xf = Math.min(1, c.xf + dt / 0.22);
+  if (c.lift) updateLift(c, dt);
   if (c.heartPops && c.heartPops.length) { for (const p of c.heartPops) p.t += dt; c.heartPops = c.heartPops.filter(p => p.t < 1.3); }
   if (c.auraOn) c.aura = Math.min(1, c.aura + dt / 0.6); else c.aura = Math.max(0, c.aura - dt / 1.2);
   if (c.auraOn && Math.random() < dt * 14) particles.push(auraParticle(c));
@@ -273,6 +299,7 @@ function updateChar(c, dt) {
       const it = c.timeline[c.tlI];
       if (it && c.tlT >= it.dur) {
         c.tlT = 0; c.tlI++;
+        if (c.holdKneel && c.tlI === c.timeline.length - 1) c.timeline.splice(c.tlI, 0, { anim: 'prostrate', dur: 1.15, on: cc => burst(cc, 14) }, { anim: 'kneel', dur: 0.85 }); // còn đang bay -> lạy tiếp
         if (c.tlI >= c.timeline.length) { const th = c.tlThen; c.timeline = null; const w = animFrames(c.pack, 'walk_up'); setFrame(c, w.frames[c.step % w.frames.length], w.flip); th && th(c); }
         else applyTL(c);
       }
@@ -296,15 +323,15 @@ function maybeSide(c) {
 
 // ---------------- Hạt & hiệu ứng ----------------
 function auraParticle(c) {
-  const h = charHeightAt(c.y), x = charX(c);
+  const h = cH(c), x = charX(c);
   const a = Math.random() * Math.PI * 2, r = h * (0.15 + Math.random() * 0.45);
-  return { x: x + Math.cos(a) * r, y: c.y - h * 0.45 + Math.sin(a) * r * 0.6, vx: (Math.random() - .5) * 10, vy: -(20 + Math.random() * 40) * h / 120, life: 0, max: 1.4 + Math.random(), size: (1.5 + Math.random() * 2.5) * Math.max(0.6, h / 120), hue: 40 + Math.random() * 15 };
+  return { x: x + Math.cos(a) * r, y: cY(c) - h * 0.45 + Math.sin(a) * r * 0.6, vx: (Math.random() - .5) * 10, vy: -(20 + Math.random() * 40) * h / 120, life: 0, max: 1.4 + Math.random(), size: (1.5 + Math.random() * 2.5) * Math.max(0.6, h / 120), hue: 40 + Math.random() * 15 };
 }
 function burst(c, n, up) {
-  const h = charHeightAt(c.y), x = charX(c);
+  const h = cH(c), x = charX(c);
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, sp = (30 + Math.random() * 70) * h / 120;
-    particles.push({ x, y: c.y - h * (up ? 0.6 : 0.3), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6 - (up ? 40 : 15) * h / 120, life: 0, max: 0.9 + Math.random() * 0.8, size: (1.2 + Math.random() * 2.4) * Math.max(0.6, h / 120), hue: 42 + Math.random() * 12 });
+    particles.push({ x, y: cY(c) - h * (up ? 0.6 : 0.3), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6 - (up ? 40 : 15) * h / 120, life: 0, max: 0.9 + Math.random() * 0.8, size: (1.2 + Math.random() * 2.4) * Math.max(0.6, h / 120), hue: 42 + Math.random() * 12 });
   }
 }
 function updateParticles(dt) {
@@ -320,7 +347,7 @@ function drawSprite(c, file, flip, alpha, h) {
   const meta = (c.pack.json.frames || {})[file] || { w: fr.full.width, h: fr.full.height, ax: fr.full.width / 2, ay: fr.full.height };
   const ref = c.pack.json.refHeight || fr.full.height;
   const k = h / ref; const dw = meta.w * k, dh = meta.h * k;
-  const x = charX(c), y = c.y + (c.bob || 0);
+  const x = charX(c), y = cY(c) + (c.bob || 0);
   const img = pickLevel(fr, dh);
   ctx.globalAlpha = alpha;
   const pu = fr.padU || 0; // viền pixel bên ngoài khung
@@ -332,7 +359,7 @@ function drawSprite(c, file, flip, alpha, h) {
 }
 function drawAura(c, h) {
   if (c.aura <= 0.01) return;
-  const x = charX(c), y = c.y - h * 0.42, I = c.aura * cfg.scene.auraIntensity;
+  const x = charX(c), y = cY(c) - h * 0.42, I = c.aura * cfg.scene.auraIntensity * (c.auraBoost || 1);
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   const R = h * (1.35 + 0.12 * Math.sin(now * 3));
   let g = ctx.createRadialGradient(x, y, 0, x, y, R);
@@ -352,24 +379,40 @@ function drawAura(c, h) {
   // vòng sáng dưới chân
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   const ry = h * 0.16, rx = h * 0.7 * (1 + 0.1 * Math.sin(now * 4));
-  g = ctx.createRadialGradient(x, c.y, 0, x, c.y, rx);
+  g = ctx.createRadialGradient(x, cY(c), 0, x, cY(c), rx);
   g.addColorStop(0, `rgba(255,220,130,${0.5 * I})`); g.addColorStop(1, 'rgba(255,180,60,0)');
-  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, c.y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, cY(c), rx, ry, 0, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
+}
+function drawLiftHalo(c, h) { // vầng hào quang sau lưng khi bay lên — vẽ thường để rõ cả trên nền sáng
+  if (!c.lift || c.aura <= 0.01) return;
+  {
+    const hx = charX(c), hy = cY(c) - h * 0.5, hr = h * (0.62 + 0.03 * Math.sin(now * 2.5)), A = Math.min(1, c.aura);
+    ctx.save();
+    let g2 = ctx.createRadialGradient(hx, hy, hr * 0.2, hx, hy, hr * 1.25);
+    g2.addColorStop(0, `rgba(255,224,130,${0.75 * A})`); g2.addColorStop(0.7, `rgba(255,175,60,${0.5 * A})`); g2.addColorStop(1, 'rgba(255,150,40,0)');
+    ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(hx, hy, hr * 1.25, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = Math.max(3, h * 0.02);
+    for (let k = 0; k < 2; k++) { ctx.strokeStyle = `rgba(255,${226 - k * 30},${130 - k * 40},${(0.85 - k * 0.35) * A})`; ctx.beginPath(); ctx.arc(hx, hy, hr * (1 - k * 0.12) + Math.sin(now * 3 + k) * 3, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.translate(hx, hy); ctx.rotate(-now * 0.5); ctx.fillStyle = `rgba(255,236,160,${0.8 * A})`;
+    for (let i = 0; i < 12; i++) { ctx.rotate(Math.PI / 6); ctx.beginPath(); ctx.arc(0, -hr * 1.08, Math.max(3, h * 0.014), 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
 }
 function drawAuraFront(c, h) {
   if (c.aura <= 0.01) return;
-  const x = charX(c), y = c.y - h * 0.45, I = c.aura * cfg.scene.auraIntensity;
+  const x = charX(c), y = cY(c) - h * 0.45, I = c.aura * cfg.scene.auraIntensity;
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   const g = ctx.createRadialGradient(x, y, 0, x, y, h * 0.6);
   g.addColorStop(0, `rgba(255,230,160,${0.18 * I})`); g.addColorStop(1, 'rgba(255,200,100,0)');
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, h * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.restore();
 }
 function drawChar(c) {
-  const h = charHeightAt(c.y);
+  const h = cH(c);
   c.bob = (c.mode === 'walk' || c.mode === 'emerge') ? -Math.sin(Math.min(1, c.stepT / cfg.scene.stepSeconds) * Math.PI) * h * 0.012 : 0;
   if (!isPixel()) drawAura(c, h);
-  if ((c.mode === 'walk' || c.mode === 'action') && !c.auraOn && c.y < DOOR_Y + 45) c.alpha = Math.min(c.alpha, 0.3 + 0.7 * Math.max(0, (c.y - DOOR_Y) / 45));
+  drawLiftHalo(c, h);
+  if (!c.lift && (c.mode === 'walk' || c.mode === 'action') && !c.auraOn && c.y < DOOR_Y + 45) c.alpha = Math.min(c.alpha, 0.3 + 0.7 * Math.max(0, (c.y - DOOR_Y) / 45));
   if (c.prev && c.xf < 1) { drawSprite(c, c.prev, c.prevFlip, c.alpha * (1 - c.xf), h); drawSprite(c, c.frame, c.flip, c.alpha * c.xf, h); }
   else drawSprite(c, c.frame, c.flip, c.alpha, h);
   ctx.globalAlpha = 1;
@@ -379,18 +422,30 @@ function drawName(c) {
   if (!c.user || !cfg.scene.showNames) return;
   const show = now < c.nameUntil || c.auraOn || (c.mode === 'action' && c.timeline && c.timeline.some(t => t.anim === 'prostrate'));
   if (!show || c.alpha < 0.05) return;
-  const h = charHeightAt(c.y);
+  const h = cH(c);
   const fs = Math.max(11, Math.min(26, cfg.scene.nameFontSize * (0.5 + 0.75 * h / (BASE_HW * 0.64))));
-  const x = charX(c), y = c.y - h * (c.frame && /kneel|prostrate/.test(c.frame) ? 0.62 : 1.04) - 6;
+  const x = charX(c), y = cY(c) - h * (c.lift ? (c.frame && /prostrate/.test(c.frame) ? 0.78 : 1.08) : (c.frame && /kneel|prostrate/.test(c.frame) ? 0.62 : 1.04)) - 6;
   const fadeIn = Math.min(1, (now - c.born) / 0.8), fadeOut = c.auraOn ? 1 : Math.min(1, (c.nameUntil - now) / 0.6);
   ctx.globalAlpha = Math.max(0, Math.min(fadeIn, fadeOut, c.alpha));
   const txt = c.name.length > 18 ? c.name.slice(0, 17) + '…' : c.name;
   const col = c.kind === 'donor' || c.auraOn ? '#ffe28a' : '#fff6e0';
-  if (isPixel()) pixelText(txt, x, y, 16, col, '#2a1030');
+  if (isPixel()) pixelText(txt, x, y, c.lift ? 32 : 16, col, '#2a1030');
   else {
-    ctx.font = `700 ${fs}px 'Noto Serif', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    ctx.lineJoin = 'round'; ctx.lineWidth = fs * 0.28; ctx.strokeStyle = 'rgba(40,18,0,.9)'; ctx.strokeText(txt, x, y);
+    const fs2 = c.lift ? 30 : fs;
+    ctx.font = `700 ${fs2}px 'Noto Serif', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.lineJoin = 'round'; ctx.lineWidth = fs2 * 0.28; ctx.strokeStyle = 'rgba(40,18,0,.9)'; ctx.strokeText(txt, x, y);
     ctx.fillStyle = col; ctx.fillText(txt, x, y);
+  }
+  // avatar nhỏ cạnh tên (người donate)
+  if (c.avatarImg && c.avatarImg.complete && c.avatarImg.naturalWidth) {
+    const big = c.lift ? 1 : 0; const sz = big ? 52 : Math.max(18, Math.min(30, fs * 1.4));
+    const twA = ctx.measureText(txt).width;
+    // khi bay lên: avatar nhỏ nằm ngay trên tên (giữa); bình thường: bên trái tên
+    const ax = big ? x : x - twA / 2 - sz / 2 - 8 - (isHeartChar(c) && c.hearts > 0 ? 34 : 0);
+    const ay = big ? y - (isPixel() ? 32 : 30) - sz / 2 - 4 : y - sz / 2 - (isPixel() ? 2 : fs * 0.15);
+    ctx.save(); ctx.beginPath(); ctx.arc(ax, ay, sz / 2, 0, Math.PI * 2); ctx.closePath();
+    ctx.fillStyle = '#f3c55f'; ctx.fill(); ctx.beginPath(); ctx.arc(ax, ay, sz / 2 - 2, 0, Math.PI * 2); ctx.clip();
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(c.avatarImg, ax - sz / 2, ay - sz / 2, sz, sz); ctx.restore();
   }
   // tim bay lên cạnh tên: mỗi lượt thả tim = 1 icon
   if (c.heartPops && c.heartPops.length) {
@@ -723,14 +778,14 @@ function render(dt) {
   if (haveVideo) ctx.drawImage(vbuf, 0, 0, W, H);
   ctx.imageSmoothingEnabled = true;
   updateMotes(dt);
-  const sorted = chars.slice().sort((a, b) => a.y - b.y);
+  const sorted = chars.slice().sort((a, b) => (a.lift ? 1e5 : a.y) - (b.lift ? 1e5 : b.y));
   if (px) {
     // 8-bit: hiệu ứng ánh sáng vẽ ở độ phân giải thấp rồi phóng to không làm mịn -> hạt vuông kiểu game cổ
-    fxLayer(fxB, () => { drawBgEffects(); drawMotes(false); for (const c of sorted) drawAura(c, charHeightAt(c.y)); });
+    fxLayer(fxB, () => { drawBgEffects(); drawMotes(false); for (const c of sorted) drawAura(c, cH(c)); });
   } else { drawBgEffects(); drawMotes(false); }
   for (const c of sorted) drawChar(c);
   drawCloudCover();
-  if (px) fxLayer(fxF, () => { for (const c of sorted) drawAuraFront(c, charHeightAt(c.y)); drawParticles(); drawMotes(true); });
+  if (px) fxLayer(fxF, () => { for (const c of sorted) drawAuraFront(c, cH(c)); drawParticles(); drawMotes(true); });
   else { drawParticles(); drawMotes(true); }
   for (const c of sorted) drawName(c);
   drawFloats(dt);
@@ -843,14 +898,23 @@ async function pumpDonors() {
     const t0 = now; await waitUntil(() => (c.mode === 'action' && c.auraOn) || c.dead || now - t0 > 6);
     if (!c.dead) await camFocus(c);
     const av = await avP;
+    const lift = ((cfg.donate && cfg.donate.style) || 'lift') === 'lift' && !c.dead;
+    // avatar nhỏ cạnh tên trên đầu nhân vật
+    c.avatarImg = new Image(); c.avatarImg.referrerPolicy = 'no-referrer'; c.avatarImg.onerror = () => { c.avatarImg.onerror = null; c.avatarImg.src = defaultAvatar(d.user.nickname); }; c.avatarImg.src = av || defaultAvatar(d.user.nickname);
+    if (lift) { // nhân vật đang quỳ lạy bay lên giữa màn hình, toả hào quang
+      c.holdKneel = true; c.auraBoost = 1.8; startLift(c);
+      const t1 = now; await waitUntil(() => !c.lift || c.lift.phase === 'hold' || c.dead || now - t1 > 5);
+    }
     if ((cfg.layout.card.delay || 0) > 0) await sleep(cfg.layout.card.delay * 1000);
-    if (!previewHold) showCard({ user: d.user, tier, fortune, gift, coins: d.coins, avatar: av });
+    if (!previewHold) showCard({ user: d.user, tier, fortune, gift, coins: d.coins, avatar: av, noFrame: lift });
     const voiceP = AudioMgr.say(voiceText);
     const secs = (tier.cardSeconds > 0 ? tier.cardSeconds : cfg.scene.cardSeconds);
     await Promise.all([voiceP, sleep(secs * 1000)]);
-    const cardRect = previewHold ? null : cardAvatarRect();
+    let fromRect = previewHold ? null : cardAvatarRect();
+    if (lift && c.lift) { const hh = c.lift.h; fromRect = { x: c.lift.x - hh * 0.3, y: c.lift.y - hh * 1.05, w: hh * 0.6 }; }
     if (!previewHold) hideCard();
-    addToGallery({ user: d.user, tier, avatar: av, from: cardRect });
+    addToGallery({ user: d.user, tier, avatar: av, from: fromRect });
+    if (lift) { c.holdKneel = false; endLift(c); c.auraBoost = 1; const t2 = now; await waitUntil(() => !c.lift || c.dead || now - t2 > 4); }
     await sleep(700);
   } catch (e) { window.api.log('Lỗi donate: ' + e.message, 'error'); }
   donorBusy = false;
@@ -975,24 +1039,25 @@ function showCard(o, instant) {
   const tr = el.querySelector('.dc-tier'); tr.textContent = fill(L.tierText ?? '✦ {tier} ✦', V); tr.style.display = L.showTier === false || !tr.textContent ? 'none' : '';
   const gf = el.querySelector('.dc-gift'); gf.textContent = fill(L.giftText ?? 'Cúng dường {gift} · {coins} xu', V); gf.style.display = L.showGift === false || !gf.textContent ? 'none' : '';
   if (L.showName === false && L.showTier === false && L.showGift === false) el.querySelector('.dc-info').style.display = 'none';
-  layer.appendChild(el);
+  if (!o.noFrame) layer.appendChild(el);
   // ô quẻ (vị trí, kích thước riêng)
   let fe = null;
   if (F.show !== false) {
     fe = document.createElement('div'); fe.className = 'dfortune';
     Object.assign(fe.style, { left: (F.x ?? 360) + 'px', top: (F.y ?? 725) + 'px', width: (F.w || 540) + 'px', transform: `translateX(-50%) scale(${F.scale || 1})` });
-    fe.innerHTML = '<div class="dc-fortune"><div class="ft-title"><span class="ft-name"></span><span class="ft-level"></span></div><div class="ft-verse"></div><div class="ft-meaning"></div></div>';
+    fe.innerHTML = '<div class="dc-fortune">' + (o.noFrame ? '<div class="ft-sub"></div>' : '') + '<div class="ft-title"><span class="ft-name"></span><span class="ft-level"></span></div><div class="ft-verse"></div><div class="ft-meaning"></div></div>';
     fe.firstChild.style.setProperty('--fop', F.opacity ?? 0.92);
     fe.querySelector('.ft-name').textContent = fill(F.titleText ?? 'Quẻ {fortuneName}', V);
     const lv = fe.querySelector('.ft-level'); lv.textContent = o.tier.fortuneLevel || 'Cát'; lv.style.display = F.showLevel === false ? 'none' : '';
     const vs = fe.querySelector('.ft-verse'); vs.innerHTML = (o.fortune.verse || []).map(v => escapeHtml(v)).join('<br>'); vs.style.display = F.showVerse === false ? 'none' : '';
     const mn = fe.querySelector('.ft-meaning'); mn.textContent = o.fortune.meaning || ''; mn.style.display = F.showMeaning === false ? 'none' : '';
+    const sub = fe.querySelector('.ft-sub'); if (sub) sub.textContent = [o.user.nickname, L.showTier !== false ? fill(L.tierText ?? '✦ {tier} ✦', V) : '', L.showGift !== false ? fill(L.giftText ?? 'Cúng dường {gift} · {coins} xu', V) : ''].filter(Boolean).join('  ·  ');
     layer.appendChild(fe);
   }
   if (instant) { el.classList.add('show'); fe && fe.classList.add('show'); }
   else requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add('show'); fe && fe.classList.add('show'); }));
-  curCard = { el, fe };
-  attachCardEdit(el.querySelector('.dc-frame'), 'card'); if (fe) attachCardEdit(fe, 'fortune');
+  curCard = { el: o.noFrame ? null : el, fe };
+  if (!o.noFrame) attachCardEdit(el.querySelector('.dc-frame'), 'card'); if (fe) attachCardEdit(fe, 'fortune');
 }
 function hideCard(instant) {
   const c = curCard; if (!c) return; curCard = null;
