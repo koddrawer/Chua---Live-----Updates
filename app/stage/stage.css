@@ -143,7 +143,9 @@ body.pixel #cardLayer, body.pixel #slotLayer, body.pixel #gallery { font-family:
 .qcard.show { opacity: 1; transform: none; }
 .qcard.active { filter: drop-shadow(0 0 14px rgba(255,214,110,.95)) drop-shadow(0 6px 10px rgba(40,10,0,.55)); }
 .qcard.hide { opacity: 0; transform: translateY(20px) scale(.95); transition: opacity .7s, transform .7s; }
-.qcard .qframe { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.qcard .qframe { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.qpanel { position: absolute; background: radial-gradient(ellipse at 50% 38%, #d8463b, #8f1d1a 85%); box-shadow: inset 0 0 0 3px rgba(60,10,0,.55), inset 0 0 18px rgba(40,0,0,.6); }
+.qpanel::after { content: ''; position: absolute; inset: 7px; border: 1px dashed rgba(255,215,130,.55); }
 .qbody { position: absolute; left: 16%; right: 16%; top: 14.5%; bottom: 20.5%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: .3em; overflow: hidden; color: #fff4d0; text-shadow: 0 1px 2px #300; }
 .q-title { font-weight: 700; color: #ffe08a; font-size: 1.12em; line-height: 1.15; }
 .q-level { display: inline-block; padding: .05em .7em; border-radius: 1em; background: #f3c55f; color: #6a0d05; font-size: .82em; font-weight: 700; text-shadow: none; }

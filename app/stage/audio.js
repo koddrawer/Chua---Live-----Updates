@@ -139,6 +139,12 @@
     const fadeMs = (cfg.voice.duckFade ?? 0.9) * 1000;
     if (S.gapTimer) { clearTimeout(S.gapTimer); S.gapTimer = null; S.paused = true; S.resumeMode = 'next'; return; }
     if (S.ctl) {
+      const a0 = S.ctl.audio, ctl0 = S.ctl;
+      if ((a0 && !a0.ended && !a0.paused) || ctl0.synth || ctl0.silent) { // đang giảng dở câu -> đợi nói hết câu rồi mới chào / cảm ơn
+        const t0 = Date.now(), maxMs = (cfg.voice.sentenceWaitMax ?? 25) * 1000;
+        await new Promise(r => { const iv = setInterval(() => { if (S.ctl !== ctl0 || Date.now() - t0 > maxMs) { clearInterval(iv); r(); } }, 40); });
+        if (S.ctl !== ctl0) { S.paused = true; S.resumeMode = 'next'; if (S.gapTimer) { clearTimeout(S.gapTimer); S.gapTimer = null; } return; }
+      }
       S.paused = true;
       const a = S.ctl.audio;
       if (a && !a.ended && !a.paused) { S.resumeMode = 'audio'; await fadeVol(a, 0, fadeMs); if (S.paused) a.pause(); }
@@ -183,6 +189,7 @@
       const it = queue.shift();
       if (cfg.voice.engine === 'off') { it.res(); continue; }
       const ctl = { low: !!it.opts.low }; curThanks = ctl;
+      try { it.opts.onStart && it.opts.onStart(); } catch {}
       await speakWith(thanksEl, it.text, cfg.voice.thanksVoice || cfg.voice.voice, cfg.voice.thanksRate || 0, 0, cfg.voice.thanksVolume, ctl);
       it.res();
     }

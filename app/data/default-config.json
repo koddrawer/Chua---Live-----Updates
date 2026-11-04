@@ -122,7 +122,8 @@
     "greetTemplate": "A Di Đà Phật, chào mừng {name} đã đến chùa.",
     "resumeDelay": 1.0,
     "fallbackGoogle": true,
-    "duckFade": 0.9
+    "duckFade": 0.9,
+    "sentenceWaitMax": 25
   },
   "music": {
     "enabled": true,
@@ -297,6 +298,7 @@
     "cardGap": 10,
     "slotCharHeight": 230,
     "readZoom": 1.5,
-    "dimBoards": true
+    "dimBoards": true,
+    "cardFrame": "alt"
   }
 }
