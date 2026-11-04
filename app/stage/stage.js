@@ -212,6 +212,7 @@ function liftTarget(c) {
   const h = D.liftHeight || 300;
   const feet = Math.min(D.liftY || 760, (F.show !== false ? (F.y ?? 725) : 1100) - 24);
   const sl = c.liftSlot;
+  if (sl && sl.slot != null) { const g = slotGeom(sl.slot); return { x: g.cx, y: g.top + g.ch * (D.charSink ?? 0.05), h: D.slotCharHeight || 200 }; }
   if (sl && sl.n > 1) { const sc = sl.n === 2 ? 0.85 : 0.72; const gap = Math.min(220, 540 / sl.n); return { x: Math.max(90, Math.min(W - 90, (D.liftX || W / 2) + (sl.i - (sl.n - 1) / 2) * gap)), y: feet, h: h * sc }; }
   return { x: D.liftX || W / 2, y: feet, h };
 }
@@ -428,26 +429,28 @@ function drawName(c) {
   if (!show || c.alpha < 0.05) return;
   const h = cH(c);
   const fs = Math.max(11, Math.min(26, cfg.scene.nameFontSize * (0.5 + 0.75 * h / (BASE_HW * 0.64))));
-  const x = charX(c), y = cY(c) - h * (c.lift ? (c.frame && /prostrate/.test(c.frame) ? 0.78 : 1.08) : (c.frame && /kneel|prostrate/.test(c.frame) ? 0.62 : 1.04)) - 6;
+  if (c.lift) { const tg = c.frame && /prostrate/.test(c.frame) ? 0.6 : 0.86; c._nk = c._nk == null ? tg : c._nk + (tg - c._nk) * 0.12; } else c._nk = null;
+  const x = charX(c), y = cY(c) - h * (c.lift ? c._nk : (c.frame && /kneel|prostrate/.test(c.frame) ? 0.62 : 1.04)) - 6;
   const fadeIn = Math.min(1, (now - c.born) / 0.8), fadeOut = c.auraOn ? 1 : Math.min(1, (c.nameUntil - now) / 0.6);
   ctx.globalAlpha = Math.max(0, Math.min(fadeIn, fadeOut, c.alpha));
   const txt = c.name.length > 18 ? c.name.slice(0, 17) + '…' : c.name;
   const col = c.kind === 'donor' || c.auraOn ? '#ffe28a' : '#fff6e0';
-  const liftFs = c.lift ? (c.liftSlot && c.liftSlot.n > 1 ? 24 : 32) : 16;
+  const liftSmall = c.liftSlot && (c.liftSlot.n > 1 || c.liftSlot.slot != null);
+  const liftFs = c.lift ? (liftSmall ? 22 : 32) : 16;
   if (isPixel()) pixelText(txt, x, y, liftFs, col, '#2a1030');
   else {
-    const fs2 = c.lift ? (c.liftSlot && c.liftSlot.n > 1 ? 23 : 30) : fs;
+    const fs2 = c.lift ? (liftSmall ? 21 : 30) : fs;
     ctx.font = `700 ${fs2}px 'Noto Serif', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.lineJoin = 'round'; ctx.lineWidth = fs2 * 0.28; ctx.strokeStyle = 'rgba(40,18,0,.9)'; ctx.strokeText(txt, x, y);
     ctx.fillStyle = col; ctx.fillText(txt, x, y);
   }
   // avatar nhỏ cạnh tên (người donate)
   if (c.avatarImg && c.avatarImg.complete && c.avatarImg.naturalWidth) {
-    const big = c.lift ? 1 : 0; const sz = big ? 52 : Math.max(18, Math.min(30, fs * 1.4));
+    const big = c.lift ? 1 : 0; const sz = big ? (liftSmall ? 38 : 52) : Math.max(18, Math.min(30, fs * 1.4));
     const twA = ctx.measureText(txt).width;
     // khi bay lên: avatar nhỏ nằm ngay trên tên (giữa); bình thường: bên trái tên
     const ax = big ? x : x - twA / 2 - sz / 2 - 8 - (isHeartChar(c) && c.hearts > 0 ? 34 : 0);
-    const ay = big ? y - (isPixel() ? liftFs : (c.liftSlot && c.liftSlot.n > 1 ? 23 : 30)) - sz / 2 - 4 : y - sz / 2 - (isPixel() ? 2 : fs * 0.15);
+    const ay = big ? y - (isPixel() ? liftFs : (liftSmall ? 21 : 30)) - sz / 2 - 4 : y - sz / 2 - (isPixel() ? 2 : fs * 0.15);
     ctx.save(); ctx.beginPath(); ctx.arc(ax, ay, sz / 2, 0, Math.PI * 2); ctx.closePath();
     ctx.fillStyle = '#f3c55f'; ctx.fill(); ctx.beginPath(); ctx.arc(ax, ay, sz / 2 - 2, 0, Math.PI * 2); ctx.clip();
     ctx.imageSmoothingEnabled = true; ctx.drawImage(c.avatarImg, ax - sz / 2, ay - sz / 2, sz, sz); ctx.restore();
@@ -684,13 +687,14 @@ function camFocus(c, opts = {}) {
     const Z = Math.max(1, opts.Z ?? s.zoomScale);
     if (cam.anim && cam.anim.res) { const r = cam.anim.res; cam.anim.res = null; r(); } // nhường cho lượt zoom mới
     // bắt đầu từ trạng thái camera hiện tại -> không bị giật khi chuyển giữa 2 lượt zoom
-    cam.anim = { t: 0, e: Math.max(0.2, opts.ease ?? s.zoomEase), hold: opts.hold ?? s.zoomHold, Z, c, res, auto: !!opts.auto, z0: cam.z, x0: cam.x, y0: cam.y };
+    cam.anim = { t: 0, e: Math.max(0.2, opts.ease ?? s.zoomEase), hold: opts.hold ?? s.zoomHold, Z, c, res, auto: !!opts.auto, fy: opts.fy, z0: cam.z, x0: cam.x, y0: cam.y };
   });
 }
+function camRelease() { const a = cam.anim; if (a && a.t < a.e + a.hold) a.hold = Math.max(0, a.t - a.e); }
 function updateCam(dt) {
   const a = cam.anim; if (!a) { cam.x = W / 2; cam.y = H / 2; cam.z = 1; return; }
   a.t += dt;
-  if (a.c && !a.c.dead) { const h = charHeightAt(a.c.y); a.tx = charX(a.c); a.ty = a.c.y - h * 0.5; }
+  if (a.c && !a.c.dead) { const h = cH(a.c); a.tx = charX(a.c); a.ty = a.fy ? a.fy(a.c) : cY(a.c) - h * 0.5; }
   if (a.tx == null) { a.tx = W / 2; a.ty = H / 2; }
   // mục tiêu được làm mượt để camera bám theo nhân vật nhẹ nhàng
   a.sx = a.sx == null ? a.tx : a.sx + (a.tx - a.sx) * Math.min(1, dt * 3);
@@ -767,6 +771,7 @@ function render(dt) {
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (!cfg) return;
   updateCam(dt);
+  slotLayer.style.transform = cam.z === 1 && cam.x === W / 2 && cam.y === H / 2 ? '' : `translate(${(W / 2 - cam.x * cam.z).toFixed(2)}px,${(H / 2 - cam.y * cam.z).toFixed(2)}px) scale(${cam.z.toFixed(4)})`;
   const k = scale * dpr;
   // khung ngang (16:9): hai bên lấp bằng video nền phóng to + làm mờ, cảnh 9:16 ở giữa
   const haveVideo = updateVideoBuffer();
@@ -931,7 +936,11 @@ function donorChar(d) {
   return c;
 }
 const raceSleep = (p, ms) => Promise.race([p, sleep(ms).then(() => undefined)]);
-async function pumpDonors() {
+function pumpDonors() {
+  if (((cfg.donate && cfg.donate.style) || 'lift') === 'lift') return runDonorStage();
+  return pumpDonorsClassic();
+}
+async function pumpDonorsClassic() {
   if (donorBusy || !donorQueue.length) return;
   donorBusy = true;
   const D = cfg.donate || {};
@@ -1002,6 +1011,140 @@ async function pumpDonors() {
   donorBusy = false;
   pumpDonors();
 }
+
+// ================= Hiện quẻ kiểu "3 thẻ bài": tối đa 3 người cùng lúc, đọc tới ai zoom vào người đó =================
+const slotLayer = document.createElement('div'); slotLayer.id = 'slotLayer';
+document.getElementById('ui').insertBefore(slotLayer, document.getElementById('cardLayer'));
+const QFRAME_SVG = `<svg class="qframe" viewBox="0 0 220 300" preserveAspectRatio="none" aria-hidden="true">
+<defs><linearGradient id="qg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0b0"/><stop offset=".45" stop-color="#e8b046"/><stop offset="1" stop-color="#a5601a"/></linearGradient>
+<radialGradient id="qr" cx=".5" cy=".38" r=".8"><stop offset="0" stop-color="#dc4a3e"/><stop offset="1" stop-color="#97201c"/></radialGradient></defs>
+<g fill="#eef4ff" stroke="#6f8fc4" stroke-width="2.5"><ellipse cx="38" cy="272" rx="34" ry="12"/><ellipse cx="62" cy="282" rx="26" ry="9"/><ellipse cx="182" cy="272" rx="34" ry="12"/><ellipse cx="158" cy="282" rx="26" ry="9"/></g>
+<rect x="15" y="21" width="190" height="241" rx="7" fill="#4e1c06"/>
+<rect x="19" y="25" width="182" height="233" rx="5" fill="url(#qg)"/>
+<rect x="27" y="33" width="166" height="217" rx="3" fill="#4e1c06"/>
+<rect x="29" y="35" width="162" height="213" fill="url(#qr)"/>
+<rect x="35" y="41" width="150" height="201" fill="none" stroke="#f3c55f" stroke-opacity=".55" stroke-dasharray="5 3"/>
+<g fill="url(#qg)" stroke="#4e1c06" stroke-width="2"><path d="M21 13l9 9-9 9-9-9z"/><path d="M199 13l9 9-9 9-9-9z"/><path d="M21 251l9 9-9 9-9-9z"/><path d="M199 251l9 9-9 9-9-9z"/>
+<path d="M76 27Q92 2 110 9Q128 2 144 27Z"/></g><circle cx="110" cy="13" r="5" fill="#d9302a" stroke="#4e1c06" stroke-width="1.5"/>
+<g id="qlan" stroke="#4e1c06" stroke-width="1.5"><path d="M8 24v12" stroke="#e8b046" stroke-width="2"/><rect x="3" y="35" width="10" height="5" fill="url(#qg)"/><ellipse cx="8" cy="51" rx="8.5" ry="11.5" fill="#e0362c"/><path d="M8 40v22M3 44q5 7 0 14M13 44q-5 7 0 14" fill="none" stroke="#ffcf6a" stroke-opacity=".7"/><rect x="3" y="61" width="10" height="5" fill="url(#qg)"/><path d="M8 66v12" stroke="#ffcf6a" stroke-width="2"/></g>
+<use href="#qlan" x="204"/>
+<g transform="translate(110 262)" stroke="#8e3456" stroke-width="1.5"><ellipse cx="0" cy="13" rx="34" ry="6" fill="#4f9a5a" stroke="#2c5a33"/>
+<ellipse cx="-19" cy="4" rx="6" ry="13" transform="rotate(-62 -19 4)" fill="#f7b3c9"/><ellipse cx="19" cy="4" rx="6" ry="13" transform="rotate(62 19 4)" fill="#f7b3c9"/>
+<ellipse cx="-10" cy="-2" rx="6.5" ry="15" transform="rotate(-30 -10 -2)" fill="#f59ab8"/><ellipse cx="10" cy="-2" rx="6.5" ry="15" transform="rotate(30 10 -2)" fill="#f59ab8"/><ellipse cx="0" cy="-6" rx="7" ry="17" fill="#fbc6d6"/></g>
+</svg>`;
+function slotGeom(i) {
+  const D = cfg.donate || {};
+  const cw = D.cardWidth || 216, gap = D.cardGap ?? 10, ch = cw * 300 / 220;
+  const cx = (D.liftX || W / 2) + (i - 1) * (cw + gap);
+  return { cx, left: cx - cw / 2, top: D.cardY ?? 560, cw, ch };
+}
+function showSlotCard(m) {
+  const d = m.d, g = slotGeom(m.slot), F = cfg.layout.fortune || {}, L = cfg.layout.card || {};
+  const V = cardVars({ user: d.user, tier: d.tier, fortune: d.fortune, gift: (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || 'quà'), coins: d.coins });
+  const el = document.createElement('div'); el.className = 'qcard';
+  Object.assign(el.style, { left: g.left + 'px', top: g.top + 'px', width: g.cw + 'px', height: g.ch + 'px', fontSize: (g.cw / 216 * 16).toFixed(2) + 'px' });
+  el.innerHTML = QFRAME_SVG + '<div class="qbody"><div class="q-title"></div><div class="q-level"></div><div class="q-verse"></div><div class="q-meaning"></div><div class="q-gift"></div></div>';
+  el.querySelector('.q-title').textContent = fill(F.titleText ?? 'Quẻ {fortuneName}', V);
+  const lv = el.querySelector('.q-level'); lv.textContent = d.tier.fortuneLevel || 'Cát'; if (F.showLevel === false) lv.remove();
+  const vs = el.querySelector('.q-verse'); vs.innerHTML = (d.fortune.verse || []).map(escapeHtml).join('<br>'); if (F.showVerse === false) vs.remove();
+  const mn = el.querySelector('.q-meaning'); mn.textContent = d.fortune.meaning || ''; if (F.showMeaning === false || !mn.textContent) mn.remove();
+  const gf = el.querySelector('.q-gift'); gf.textContent = L.showGift !== false ? fill(L.giftText ?? 'Cúng dường {gift} · {coins} xu', V) : ''; if (!gf.textContent) gf.remove();
+  slotLayer.appendChild(el);
+  // chữ dài thì tự thu nhỏ cho vừa khung
+  const body = el.querySelector('.qbody'); let fsz = 1;
+  for (let k = 0; k < 12 && body.scrollHeight > body.clientHeight + 1; k++) { fsz -= 0.06; body.style.fontSize = fsz + 'em'; }
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+  m.el = el;
+}
+function hideSlotCard(m) { const el = m.el; if (!el) return; m.el = null; el.classList.remove('show', 'active'); el.classList.add('hide'); setTimeout(() => el.remove(), 900); }
+let stageRunning = false;
+const stageMembers = [];
+function freeSlot() { const used = new Set(stageMembers.map(m => m.slot)); const max = Math.max(1, Math.min(3, (cfg.donate && cfg.donate.groupMax) || 3)); const order = max === 1 ? [1] : max === 2 ? [1, 0] : [1, 0, 2]; return order.find(i => !used.has(i)); }
+async function addStageMember(d, slot) {
+  const c = donorChar(d);
+  const m = { d, slot, read: false, readEnd: 0, joined: now };
+  stageMembers.push(m); donorsInProgress.push(d); saveDonors();
+  if (c) {
+    c.liftSlot = { slot }; kneel(c, d.tier.kneelRounds ?? cfg.scene.kneelRounds); c.auraOn = true;
+    c.holdKneel = true; c.auraBoost = 1.6; startLift(c);
+  }
+  showSlotCard(m);
+  d.av = await raceSleep(d.avP, 600);
+  if (c) { c.avatarImg = new Image(); c.avatarImg.referrerPolicy = 'no-referrer'; c.avatarImg.onerror = () => { c.avatarImg.onerror = null; c.avatarImg.src = defaultAvatar(d.user.nickname); }; c.avatarImg.src = d.av || defaultAvatar(d.user.nickname); }
+  return m;
+}
+function releaseStageMember(m) {
+  const i = stageMembers.indexOf(m); if (i < 0) return; stageMembers.splice(i, 1);
+  const d = m.d, c = d.c;
+  hideSlotCard(m);
+  let fr = null; if (c && c.lift) { const hh = c.lift.h; fr = { x: c.lift.x - hh * 0.3, y: c.lift.y - hh * 1.05, w: hh * 0.6 }; }
+  addToGallery({ user: d.user, tier: d.tier, avatar: d.av, from: fr });
+  const j = donorsInProgress.indexOf(d); if (j >= 0) donorsInProgress.splice(j, 1); saveDonors();
+  if (c) { c.holdKneel = false; c.auraBoost = 1; endLift(c); (async () => { const t2 = now; await waitUntil(() => !c.lift || c.dead || now - t2 > 4); c.liftSlot = null; c.donorPending = false; c.lastActive = now; })(); }
+}
+// nhận người mới vào thẻ trống; hết chỗ thì nhường chỗ của người đã được đọc xong
+function fillStage() {
+  while (donorQueue.length) {
+    let slot = freeSlot();
+    if (slot == null) {
+      const done = stageMembers.filter(m => m.read && now - m.readEnd >= 1.2).sort((a, b) => a.readEnd - b.readEnd)[0];
+      if (!done) break;
+      slot = done.slot; releaseStageMember(done);
+    }
+    addStageMember(donorQueue.shift(), slot);
+  }
+}
+async function runDonorStage() {
+  if (stageRunning || !donorQueue.length) return;
+  stageRunning = true; donorBusy = true; document.body.classList.toggle('donor-stage', (cfg.donate && cfg.donate.dimBoards) !== false);
+  const D = cfg.donate || {};
+  const maxWait = D.maxWait ?? 5;
+  const fill_iv = setInterval(() => { try { fillStage(); } catch (e) { console.error(e); } }, 100);
+  try {
+    fillStage();
+    let lastEnd = now;
+    for (;;) {
+      const m = stageMembers.filter(x => !x.read).sort((a, b) => a.joined - b.joined)[0];
+      if (m) {
+        await sleep(Math.max(0, 900 - (now - m.joined) * 1000)); // chờ nhân vật bay lên gần tới thẻ
+        if (!stageMembers.includes(m)) continue;
+        const d = m.d, c = d.c;
+        for (const x of stageMembers) x.el && x.el.classList.toggle('active', x === m);
+        if (c && !c.dead && D.readZoom !== 0) {
+          const g = slotGeom(m.slot);
+          camFocus(c, { Z: D.readZoom || 1.5, ease: 0.7, hold: 999, fy: cc => ((cY(cc) - cH(cc) * 1.05) + (g.top + g.ch)) / 2 });
+        }
+        const alone = stageMembers.length === 1 && !donorQueue.length;
+        const text = alone ? (d.fullText || donorVoice(d, false)) : d.shortText;
+        let voiceDone = false; AudioMgr.say(text, { cuttable: true }).then(() => { voiceDone = true; });
+        const t0 = now;
+        await new Promise(res => {
+          const iv = setInterval(() => {
+            const el = now - t0;
+            if (voiceDone && el >= 2.5) { clearInterval(iv); return res(); }
+            // người chờ sắp quá hạn mà không còn thẻ nào nhường được -> đọc ngắn lại
+            // lời cảm ơn dài (lúc chỉ có 1 người) thì nhường cho người mới vào; lời ngắn thì đọc trọn
+            const oldest = Math.max(donorQueue.length && !stageMembers.some(x => x.read) ? now - donorQueue[0].at : 0, ...(alone ? stageMembers.filter(x => x !== m && !x.read).map(x => now - x.d.at) : []));
+            if (maxWait > 0 && el >= 2.5 && oldest >= Math.max(1, maxWait - 2)) { AudioMgr.cutThanks(); clearInterval(iv); return res(); }
+          }, 50);
+        });
+        m.read = true; m.readEnd = now; lastEnd = now;
+        if (m.el) m.el.classList.remove('active');
+        continue;
+      }
+      // ai cũng đã được đọc: thu camera, giữ thẻ thêm một lúc rồi kết thúc lượt
+      camRelease();
+      if (!stageMembers.length && !donorQueue.length) break;
+      const holdSecs = Math.max(2, ...stageMembers.map(x => (x.d.tier.cardSeconds > 0 ? x.d.tier.cardSeconds : cfg.scene.cardSeconds))) - 2;
+      if (!donorQueue.length && now - lastEnd >= holdSecs) { for (const x of stageMembers.slice()) releaseStageMember(x); await sleep(1200); continue; }
+      await sleep(100);
+    }
+  } catch (e) { window.api.log('Lỗi donate: ' + e.message, 'error'); for (const x of stageMembers.slice()) releaseStageMember(x); }
+  clearInterval(fill_iv); camRelease();
+  stageRunning = false; donorBusy = false; document.body.classList.remove('donor-stage');
+  if (donorQueue.length) runDonorStage();
+}
+
 // ---------------- Avatar donate treo hai bên Đức Phật ----------------
 let gallery = []; // { uid, el, size, side, born }
 let gallerySide = 0;

@@ -1,4 +1,4 @@
 {
-  "version": "1.0.29",
-  "notes": "Giữ lại người donate đang chờ đọc quẻ và avatar treo cạnh Phật khi cập nhật nóng / khởi động lại; cập nhật chờ đọc xong quẻ rồi mới khởi động lại"
+  "version": "1.0.30",
+  "notes": "Bố cục quẻ mới: 3 thẻ quẻ cùng lúc, nhân vật quỳ lạy trên mỗi thẻ (tên + avatar trên đầu), đọc tới ai zoom vào người đó"
 }

@@ -291,6 +291,12 @@
     "liftSeconds": 1.4,
     "maxWait": 5,
     "groupMax": 3,
-    "shortTemplate": "Cảm ơn {name}. Quẻ {fortuneName}, {level}. {verse}."
+    "shortTemplate": "Cảm ơn {name}. Quẻ {fortuneName}, {level}. {verse}.",
+    "cardY": 560,
+    "cardWidth": 216,
+    "cardGap": 10,
+    "slotCharHeight": 230,
+    "readZoom": 1.5,
+    "dimBoards": true
   }
 }
