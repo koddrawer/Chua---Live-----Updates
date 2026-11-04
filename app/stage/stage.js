@@ -873,7 +873,7 @@ function onGift(ev) {
   const tier = tierFor(coins); if (!tier || coins < tier.min) return;
   // gộp nếu người này đang chờ trong hàng
   const q = donorQueue.find(d => d.user.id === u.id);
-  if (q) { q.coins += coins; q.gift = ev.giftName; q.repeat = (q.repeat || 1) + (ev.repeat || 1); q.tier = tierFor(q.coins); saveDonors(); return; }
+  if (q) { q.coins += coins; q.gifts = q.gifts || { [q.gift || 'quà']: q.repeat || 1 }; const gn = ev.giftName || 'quà'; q.gifts[gn] = (q.gifts[gn] || 0) + (ev.repeat || 1); q.tier = tierFor(q.coins); q.fullText = donorVoice(q, false); q.shortText = q.fullText; AudioMgr.prefetchThanks(q.fullText); saveDonors(); return; }
   let c = byUser.get(u.id);
   if (!c || c.removing) {
     const qi = joinQueue.findIndex(x => x.id === u.id); if (qi >= 0) joinQueue.splice(qi, 1);
@@ -883,15 +883,13 @@ function onGift(ev) {
   const d = { user: u, c, coins, gift: ev.giftName, repeat: ev.repeat || 1, tier, at: now, wall: ev.wall || Date.now(), fortune: ev.fortune || pickFortune() };
   // tải trước giọng đọc + avatar ngay khi nhận quà để lúc tới lượt là đọc được liền
   d.avP = u.avatar ? window.api.avatar(u.avatars && u.avatars.length ? u.avatars : u.avatar).catch(() => null) : Promise.resolve(null);
-  d.shortText = donorVoice(d, true);
-  if (donorBusy || donorQueue.length) AudioMgr.prefetchThanks(d.shortText);
-  else { d.fullText = donorVoice(d, false); AudioMgr.prefetchThanks(d.fullText); }
+  d.fullText = donorVoice(d, false); d.shortText = d.fullText; AudioMgr.prefetchThanks(d.fullText);
   donorQueue.push(d); saveDonors();
   pumpDonors();
 }
 // ---- lưu / khôi phục người donate đang chờ (cập nhật nóng, khởi động lại, app lỗi) ----
 function saveDonors() {
-  try { window.api.saveState('donors', [...donorsInProgress, ...donorQueue].map(d => ({ user: d.user, coins: d.coins, gift: d.gift, repeat: d.repeat, fortune: d.fortune, wall: d.wall }))); } catch {}
+  try { window.api.saveState('donors', [...donorsInProgress, ...donorQueue].map(d => ({ user: d.user, coins: d.coins, gift: d.gift, repeat: d.repeat, gifts: d.gifts, fortune: d.fortune, wall: d.wall }))); } catch {}
 }
 async function restoreDonors() {
   try {
@@ -899,14 +897,18 @@ async function restoreDonors() {
     const fresh = list.filter(r => r && r.user && r.user.id && Date.now() - (r.wall || 0) < 3 * 3600e3);
     if (!fresh.length) return;
     window.api.log(`Khôi phục ${fresh.length} người donate đang chờ đọc quẻ (từ lần chạy trước)`, 'ok');
-    for (const r of fresh) onGift({ user: r.user, coins: r.coins, giftName: r.gift, repeat: r.repeat, fortune: r.fortune, wall: r.wall });
+    for (const r of fresh) { onGift({ user: r.user, coins: r.coins, giftName: r.gift, repeat: r.repeat, fortune: r.fortune, wall: r.wall }); const q = donorQueue.find(x => x.user.id === r.user.id); if (q && r.gifts) { q.gifts = r.gifts; q.fullText = q.shortText = donorVoice(q, false); } }
   } catch (e) { window.api.log('Không khôi phục được hàng donate: ' + e.message, 'warn'); }
 }
 function cardVars(o) {
   return { name: o.user.nickname, tier: o.tier.label || '', gift: o.gift, coins: o.coins, fortuneName: o.fortune.name || '', level: o.tier.fortuneLevel || '', fortune: o.fortune.meaning || '', verse: (o.fortune.verse || []).join(', ') };
 }
+function giftLabel(d) {
+  if (d.gifts) { const e = Object.entries(d.gifts).map(([n, k]) => (k > 1 ? k + ' ' : '') + n); return e.length > 1 ? e.slice(0, -1).join(', ') + ' và ' + e[e.length - 1] : e[0]; }
+  return (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || 'quà');
+}
 function donorVars(d) {
-  const gift = (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || 'quà');
+  const gift = giftLabel(d);
   const v = cardVars({ user: d.user, tier: d.tier, fortune: d.fortune, gift, coins: d.coins });
   v.name = voiceName(d.user.nickname); v.verse = (d.fortune.verse || []).join('. ');
   return v;
@@ -923,11 +925,12 @@ function groupVoice(group) {
   return cleanVoice(`A Di Đà Phật. Cảm ơn ${names}. ` + vs.map(v => `${v.name} được quẻ ${v.fortuneName}, ${v.level}`).join('. ') + '.');
 }
 // gọi lại nhân vật cho người donate nếu đã biến mất / chưa có
+const onStage = c => typeof stageMembers !== 'undefined' && stageMembers.some(x => x.d.c === c);
 function donorChar(d) {
   let c = d.c;
-  if (!c || c.dead || c.removing || !chars.includes(c)) {
+  if (!c || c.dead || c.removing || !chars.includes(c) || onStage(c)) {
     const cur = byUser.get(d.user.id);
-    c = (cur && !cur.dead && !cur.removing) ? cur : spawn({ kind: 'donor', user: d.user, y: 1240, force: true });
+    c = (cur && !cur.dead && !cur.removing && !onStage(cur)) ? cur : spawn({ kind: 'donor', user: d.user, y: 1240, force: true });
     if (!c) return null;
     c.kind = 'donor'; c.nameUntil = Math.max(c.nameUntil || 0, now + cfg.scene.nameSeconds);
   }
@@ -944,7 +947,7 @@ async function pumpDonorsClassic() {
   if (donorBusy || !donorQueue.length) return;
   donorBusy = true;
   const D = cfg.donate || {};
-  const maxWait = D.maxWait ?? 5;             // mỗi người donate phải thấy + nghe quẻ trong vòng N giây
+  const maxWait = 0; // bỏ quy định 5s: đọc lần lượt, đầy đủ
   const liftMode = (D.style || 'lift') === 'lift';
   const groupMax = maxWait > 0 && liftMode ? Math.max(1, D.groupMax || 3) : 1;
   let group = [];
@@ -1037,7 +1040,7 @@ function slotGeomFor(m) { const g = slotGeom(m.slot); const f = m.frame || QFRAM
 function showSlotCard(m) {
   const d = m.d, g = slotGeomFor(m), F = cfg.layout.fortune || {}, L = cfg.layout.card || {};
   const o = g.f.open, T = QF_TEXT, pad = 0.03;
-  const V = cardVars({ user: d.user, tier: d.tier, fortune: d.fortune, gift: (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || 'quà'), coins: d.coins });
+  const V = cardVars({ user: d.user, tier: d.tier, fortune: d.fortune, gift: giftLabel(d), coins: d.coins });
   const el = document.createElement('div'); el.className = 'qcard';
   Object.assign(el.style, { left: g.left + 'px', top: g.top + 'px', width: g.cw + 'px', height: g.ch + 'px', fontSize: (g.cw / 216 * 16).toFixed(2) + 'px' });
   const box = (k, b = o) => `left:${((b[0] + k) * 100).toFixed(2)}%;top:${((b[1] + k * 0.75) * 100).toFixed(2)}%;right:${((1 - b[2] + k) * 100).toFixed(2)}%;bottom:${((1 - b[3] + k * 0.75) * 100).toFixed(2)}%`;
@@ -1111,18 +1114,13 @@ async function runDonorStage() {
           for (const x of stageMembers) x.el && x.el.classList.toggle('active', x === m);
           if (c && !c.dead && D.readZoom !== 0) { const g = slotGeomFor(m); camFocus(c, { Z: D.readZoom || 1.5, ease: 0.7, hold: 999, fy: cc => ((cY(cc) - cH(cc) * 1.05) + (g.top + g.ch)) / 2 }); }
         };
-        const alone = stageMembers.length === 1 && !donorQueue.length;
-        const text = alone ? (d.fullText || donorVoice(d, false)) : d.shortText;
+        const text = donorVoice(d, false); // luôn đọc lời chúc đầy đủ theo mẫu
         let voiceDone = false, started = false, t0 = now;
         AudioMgr.say(text, { cuttable: true, onStart: () => { started = true; t0 = now; startRead(); } }).then(() => { voiceDone = true; if (!started) { started = true; startRead(); } });
         await new Promise(res => {
           const iv = setInterval(() => {
             const el = started ? now - t0 : 0;
-            if (voiceDone && el >= 2.5) { clearInterval(iv); return res(); }
-            // người chờ sắp quá hạn mà không còn thẻ nào nhường được -> đọc ngắn lại
-            // lời cảm ơn dài (lúc chỉ có 1 người) thì nhường cho người mới vào; lời ngắn thì đọc trọn
-            const oldest = Math.max(donorQueue.length && !stageMembers.some(x => x.read) ? now - donorQueue[0].at : 0, ...(alone ? stageMembers.filter(x => x !== m && !x.read).map(x => now - x.d.at) : []));
-            if (maxWait > 0 && el >= 2.5 && oldest >= Math.max(1, maxWait - 2)) { AudioMgr.cutThanks(); clearInterval(iv); return res(); }
+            if (voiceDone && el >= 1.5) { clearInterval(iv); return res(); } // đọc trọn từng người, không ngắt
           }, 50);
         });
         m.read = true; m.readEnd = now; lastEnd = now;

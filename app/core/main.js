@@ -40,6 +40,8 @@ function deepMerge(base, over) {
   return out;
 }
 let config = deepMerge(DEFAULTS, readJSON(CONFIG_PATH, {}));
+// v1.0.33: dùng mẫu lời chúc mới cho người donate (đổi 1 lần)
+if (!config._migThanks33) { config.voice.thanksTemplate = DEFAULTS.voice.thanksTemplate; config._migThanks33 = true; try { writeJSON(CONFIG_PATH, config); } catch {} }
 // nâng cấp cấu hình cũ
 const OLD_THANKS = 'A Di Đà Phật. Xin cảm ơn {name} đã gửi tặng {gift}. {name} rút được quẻ {level}: {fortune}. Nguyện cầu Tam Bảo gia hộ cho {name} thân tâm an lạc, vạn sự cát tường.';
 if (config.update && (!config.update.repo || config.update.repo === 'koddrawer/chua-live-updates')) config.update.repo = DEFAULTS.update.repo;
