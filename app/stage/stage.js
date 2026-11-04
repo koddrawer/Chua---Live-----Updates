@@ -212,7 +212,7 @@ function liftTarget(c) {
   const h = D.liftHeight || 300;
   const feet = Math.min(D.liftY || 760, (F.show !== false ? (F.y ?? 725) : 1100) - 24);
   const sl = c.liftSlot;
-  if (sl && sl.slot != null) { const g = slotGeomFor(sl); return { x: g.cx, y: g.top + g.ch * (g.f.sink || 0.06), h: D.slotCharHeight || 200 }; }
+  if (sl && sl.slot != null) { const g = slotGeomFor(sl); return { x: g.cx, y: g.top + g.ch * ((cfg.donate && cfg.donate.charSink) ?? 0.08), h: D.slotCharHeight || 200 }; }
   if (sl && sl.n > 1) { const sc = sl.n === 2 ? 0.85 : 0.72; const gap = Math.min(220, 540 / sl.n); return { x: Math.max(90, Math.min(W - 90, (D.liftX || W / 2) + (sl.i - (sl.n - 1) / 2) * gap)), y: feet, h: h * sc }; }
   return { x: D.liftX || W / 2, y: feet, h };
 }
@@ -1030,14 +1030,17 @@ function slotGeom(i) {
   const cx = (D.liftX || W / 2) + (i - 1) * (cw + gap);
   return { cx, left: cx - cw / 2, top: D.cardY ?? 560, cw, ch };
 }
+// mọi thẻ cùng kích thước, cùng hàng; vùng chữ dùng chung để các dòng quẻ thẳng hàng nhau
+const QF_RATIO = Math.max(...QFRAMES.map(f => f.h / f.w));
+const QF_TEXT = [Math.max(...QFRAMES.map(f => f.open[0])), Math.max(...QFRAMES.map(f => f.open[1])), Math.min(...QFRAMES.map(f => f.open[2])), Math.min(...QFRAMES.map(f => f.open[3]))];
 function slotGeomFor(m) { const g = slotGeom(m.slot); const f = m.frame || QFRAMES[0]; g.ch = g.cw * f.h / f.w; g.f = f; return g; }
 function showSlotCard(m) {
   const d = m.d, g = slotGeomFor(m), F = cfg.layout.fortune || {}, L = cfg.layout.card || {};
-  const o = g.f.open, pad = 0.03;
+  const o = g.f.open, T = QF_TEXT, pad = 0.03;
   const V = cardVars({ user: d.user, tier: d.tier, fortune: d.fortune, gift: (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || 'quà'), coins: d.coins });
   const el = document.createElement('div'); el.className = 'qcard';
   Object.assign(el.style, { left: g.left + 'px', top: g.top + 'px', width: g.cw + 'px', height: g.ch + 'px', fontSize: (g.cw / 216 * 16).toFixed(2) + 'px' });
-  const box = (k) => `left:${((o[0] + k) * 100).toFixed(2)}%;top:${((o[1] + k * 0.75) * 100).toFixed(2)}%;right:${((1 - o[2] + k) * 100).toFixed(2)}%;bottom:${((1 - o[3] + k * 0.75) * 100).toFixed(2)}%`;
+  const box = (k, b = o) => `left:${((b[0] + k) * 100).toFixed(2)}%;top:${((b[1] + k * 0.75) * 100).toFixed(2)}%;right:${((1 - b[2] + k) * 100).toFixed(2)}%;bottom:${((1 - b[3] + k * 0.75) * 100).toFixed(2)}%`;
   el.innerHTML = `<div class="qpanel" style="${box(-0.012)}"></div><img class="qframe" src="${assetsBase}qframes/${g.f.file}"><div class="qbody" style="${box(pad)}"><div class="q-title"></div><div class="q-level"></div><div class="q-verse"></div><div class="q-meaning"></div><div class="q-gift"></div></div>`;
   el.querySelector('.q-title').textContent = fill(F.titleText ?? 'Quẻ {fortuneName}', V);
   const lv = el.querySelector('.q-level'); lv.textContent = d.tier.fortuneLevel || 'Cát'; if (F.showLevel === false) lv.remove();
@@ -1057,7 +1060,7 @@ const stageMembers = [];
 function freeSlot() { const used = new Set(stageMembers.map(m => m.slot)); const max = Math.max(1, Math.min(3, (cfg.donate && cfg.donate.groupMax) || 3)); const order = max === 1 ? [1] : max === 2 ? [1, 0] : [1, 0, 2]; return order.find(i => !used.has(i)); }
 async function addStageMember(d, slot) {
   const c = donorChar(d);
-  const m = { d, slot, read: false, readEnd: 0, joined: now, frame: pickQFrame() };
+  const m = { d, slot, read: false, readEnd: 0, joined: now, frame: stageMembers.length ? stageMembers[0].frame : pickQFrame() }; // các thẻ cùng lúc dùng chung 1 khung -> thẳng hàng
   stageMembers.push(m); donorsInProgress.push(d); saveDonors();
   if (c) {
     c.liftSlot = { slot, frame: m.frame }; kneel(c, d.tier.kneelRounds ?? cfg.scene.kneelRounds); c.auraOn = true;
