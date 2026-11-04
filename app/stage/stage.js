@@ -210,6 +210,8 @@ function liftTarget(c) {
   const D = cfg.donate || {}; const F = cfg.layout.fortune || {};
   const h = D.liftHeight || 300;
   const feet = Math.min(D.liftY || 760, (F.show !== false ? (F.y ?? 725) : 1100) - 24);
+  const sl = c.liftSlot;
+  if (sl && sl.n > 1) { const sc = sl.n === 2 ? 0.85 : 0.72; const gap = Math.min(220, 540 / sl.n); return { x: Math.max(90, Math.min(W - 90, (D.liftX || W / 2) + (sl.i - (sl.n - 1) / 2) * gap)), y: feet, h: h * sc }; }
   return { x: D.liftX || W / 2, y: feet, h };
 }
 function startLift(c) {
@@ -430,9 +432,10 @@ function drawName(c) {
   ctx.globalAlpha = Math.max(0, Math.min(fadeIn, fadeOut, c.alpha));
   const txt = c.name.length > 18 ? c.name.slice(0, 17) + '…' : c.name;
   const col = c.kind === 'donor' || c.auraOn ? '#ffe28a' : '#fff6e0';
-  if (isPixel()) pixelText(txt, x, y, c.lift ? 32 : 16, col, '#2a1030');
+  const liftFs = c.lift ? (c.liftSlot && c.liftSlot.n > 1 ? 24 : 32) : 16;
+  if (isPixel()) pixelText(txt, x, y, liftFs, col, '#2a1030');
   else {
-    const fs2 = c.lift ? 30 : fs;
+    const fs2 = c.lift ? (c.liftSlot && c.liftSlot.n > 1 ? 23 : 30) : fs;
     ctx.font = `700 ${fs2}px 'Noto Serif', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.lineJoin = 'round'; ctx.lineWidth = fs2 * 0.28; ctx.strokeStyle = 'rgba(40,18,0,.9)'; ctx.strokeText(txt, x, y);
     ctx.fillStyle = col; ctx.fillText(txt, x, y);
@@ -443,7 +446,7 @@ function drawName(c) {
     const twA = ctx.measureText(txt).width;
     // khi bay lên: avatar nhỏ nằm ngay trên tên (giữa); bình thường: bên trái tên
     const ax = big ? x : x - twA / 2 - sz / 2 - 8 - (isHeartChar(c) && c.hearts > 0 ? 34 : 0);
-    const ay = big ? y - (isPixel() ? 32 : 30) - sz / 2 - 4 : y - sz / 2 - (isPixel() ? 2 : fs * 0.15);
+    const ay = big ? y - (isPixel() ? liftFs : (c.liftSlot && c.liftSlot.n > 1 ? 23 : 30)) - sz / 2 - 4 : y - sz / 2 - (isPixel() ? 2 : fs * 0.15);
     ctx.save(); ctx.beginPath(); ctx.arc(ax, ay, sz / 2, 0, Math.PI * 2); ctx.closePath();
     ctx.fillStyle = '#f3c55f'; ctx.fill(); ctx.beginPath(); ctx.arc(ax, ay, sz / 2 - 2, 0, Math.PI * 2); ctx.clip();
     ctx.imageSmoothingEnabled = true; ctx.drawImage(c.avatarImg, ax - sz / 2, ay - sz / 2, sz, sz); ctx.restore();
@@ -868,66 +871,117 @@ function onGift(ev) {
   let c = byUser.get(u.id);
   if (!c || c.removing) {
     const qi = joinQueue.findIndex(x => x.id === u.id); if (qi >= 0) joinQueue.splice(qi, 1);
-    c = spawn({ kind: 'donor', user: u, y: 1240 });
-    if (!c) return;
+    c = spawn({ kind: 'donor', user: u, y: 1240 }); // đầy màn hình -> null, tới lượt sẽ tạo lại
   }
-  c.kind = 'donor'; c.donorPending = true;
-  c.nameUntil = Math.max(c.nameUntil, now + cfg.scene.nameSeconds);
-  donorQueue.push({ user: u, c, coins, gift: ev.giftName, repeat: ev.repeat || 1, tier });
+  if (c) { c.kind = 'donor'; c.donorPending = true; c.nameUntil = Math.max(c.nameUntil, now + cfg.scene.nameSeconds); }
+  const d = { user: u, c, coins, gift: ev.giftName, repeat: ev.repeat || 1, tier, at: now, fortune: pickFortune() };
+  // tải trước giọng đọc + avatar ngay khi nhận quà để lúc tới lượt là đọc được liền
+  d.avP = u.avatar ? window.api.avatar(u.avatars && u.avatars.length ? u.avatars : u.avatar).catch(() => null) : Promise.resolve(null);
+  d.shortText = donorVoice(d, true);
+  if (donorBusy || donorQueue.length) AudioMgr.prefetchThanks(d.shortText);
+  else { d.fullText = donorVoice(d, false); AudioMgr.prefetchThanks(d.fullText); }
+  donorQueue.push(d);
   pumpDonors();
 }
 function cardVars(o) {
   return { name: o.user.nickname, tier: o.tier.label || '', gift: o.gift, coins: o.coins, fortuneName: o.fortune.name || '', level: o.tier.fortuneLevel || '', fortune: o.fortune.meaning || '', verse: (o.fortune.verse || []).join(', ') };
 }
+function donorVars(d) {
+  const gift = (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || 'quà');
+  const v = cardVars({ user: d.user, tier: d.tier, fortune: d.fortune, gift, coins: d.coins });
+  v.name = voiceName(d.user.nickname); v.verse = (d.fortune.verse || []).join('. ');
+  return v;
+}
+const cleanVoice = t => t.replace(/\s+([.,])/g, '$1').replace(/\.{2,}/g, '.').replace(/\s+/g, ' ').trim();
+function donorVoice(d, short) {
+  const D = cfg.donate || {};
+  const tpl = short ? (D.shortTemplate || 'Cảm ơn {name}. Quẻ {fortuneName}, {level}. {verse}.') : cfg.voice.thanksTemplate;
+  return cleanVoice(fill(tpl, donorVars(d)));
+}
+function groupVoice(group) {
+  const vs = group.map(donorVars);
+  const names = vs.length > 1 ? vs.slice(0, -1).map(v => v.name).join(', ') + ' và ' + vs[vs.length - 1].name : vs[0].name;
+  return cleanVoice(`A Di Đà Phật. Cảm ơn ${names}. ` + vs.map(v => `${v.name} được quẻ ${v.fortuneName}, ${v.level}`).join('. ') + '.');
+}
+// gọi lại nhân vật cho người donate nếu đã biến mất / chưa có
+function donorChar(d) {
+  let c = d.c;
+  if (!c || c.dead || c.removing || !chars.includes(c)) {
+    const cur = byUser.get(d.user.id);
+    c = (cur && !cur.dead && !cur.removing) ? cur : spawn({ kind: 'donor', user: d.user, y: 1240, force: true });
+    if (!c) return null;
+    c.kind = 'donor'; c.nameUntil = Math.max(c.nameUntil || 0, now + cfg.scene.nameSeconds);
+  }
+  d.c = c; c.donorPending = true;
+  if (c.mode === 'emerge' || c.y > START_Y) { c.alpha = 1; c.y = Math.min(c.y, START_Y); c.mode = 'walk'; c.pendingKneel = 0; } // vào thẳng bậc thang, không chờ đi lên
+  return c;
+}
+const raceSleep = (p, ms) => Promise.race([p, sleep(ms).then(() => undefined)]);
 async function pumpDonors() {
   if (donorBusy || !donorQueue.length) return;
   donorBusy = true;
+  const D = cfg.donate || {};
+  const maxWait = D.maxWait ?? 5;             // mỗi người donate phải thấy + nghe quẻ trong vòng N giây
+  const liftMode = (D.style || 'lift') === 'lift';
+  const groupMax = maxWait > 0 && liftMode ? Math.max(1, D.groupMax || 3) : 1;
+  let group = [];
   try {
-    const d = donorQueue.shift();
-    let c = d.c; const tier = d.tier;
-    // nhân vật đã biến mất trong lúc chờ lượt -> gọi lại một nhân vật mới cho người donate
-    if (!c || c.dead || c.removing || !chars.includes(c)) {
-      const cur = byUser.get(d.user.id);
-      c = (cur && !cur.dead && !cur.removing) ? cur : spawn({ kind: 'donor', user: d.user, y: 1240 });
-      if (!c) throw new Error('không tạo được nhân vật');
-      c.kind = 'donor'; c.nameUntil = Math.max(c.nameUntil || 0, now + cfg.scene.nameSeconds);
+    const t0 = now;
+    // đang có nhiều người chờ -> cho lên cùng lúc (tối đa groupMax người)
+    group = donorQueue.splice(0, Math.min(groupMax, donorQueue.length));
+    for (const d of group) {
+      const c = donorChar(d); if (!c) continue;
+      c.liftSlot = { i: group.indexOf(d), n: group.length };
+      kneel(c, d.tier.kneelRounds ?? cfg.scene.kneelRounds);
+      c.auraOn = true;
     }
-    c.donorPending = true;
-    const rounds = tier.kneelRounds ?? cfg.scene.kneelRounds;
-    kneel(c, rounds);
-    // chuẩn bị nội dung & giọng đọc ngay để không bị trễ
-    const fortune = pickFortune();
-    const gift = (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || 'quà');
-    const vars = cardVars({ user: d.user, tier, fortune, gift, coins: d.coins });
-    vars.name = voiceName(d.user.nickname); vars.verse = (fortune.verse || []).join('. ');
-    const voiceText = fill(cfg.voice.thanksTemplate, vars).replace(/\s+([.,])/g, '$1').replace(/\.{2,}/g, '.');
-    AudioMgr.prefetchThanks(voiceText);
-    const avP = d.user.avatar ? window.api.avatar(d.user.avatars && d.user.avatars.length ? d.user.avatars : d.user.avatar) : Promise.resolve(null);
-    // chờ nhân vật quỳ xuống
-    const t0 = now; await waitUntil(() => (c.mode === 'action' && c.auraOn) || c.dead || now - t0 > 9);
-    if (!c.dead) await camFocus(c);
-    const av = await avP;
-    const liftMode = ((cfg.donate && cfg.donate.style) || 'lift') === 'lift';
-    const lift = liftMode && !c.dead;
-    // avatar nhỏ cạnh tên trên đầu nhân vật
-    c.avatarImg = new Image(); c.avatarImg.referrerPolicy = 'no-referrer'; c.avatarImg.onerror = () => { c.avatarImg.onerror = null; c.avatarImg.src = defaultAvatar(d.user.nickname); }; c.avatarImg.src = av || defaultAvatar(d.user.nickname);
-    if (lift) { // nhân vật đang quỳ lạy bay lên giữa màn hình, toả hào quang
-      c.holdKneel = true; c.auraBoost = 1.8; startLift(c);
-      const t1 = now; await waitUntil(() => !c.lift || c.lift.phase === 'hold' || c.dead || now - t1 > 5);
+    const live = group.filter(d => d.c && !d.c.dead);
+    // avatar: chờ tối đa 0.6s, chưa có thì dùng ảnh mặc định
+    for (const d of group) d.av = await raceSleep(d.avP, Math.max(0, 600 - (now - t0) * 1000));
+    for (const d of live) { const c = d.c; c.avatarImg = new Image(); c.avatarImg.referrerPolicy = 'no-referrer'; c.avatarImg.onerror = () => { c.avatarImg.onerror = null; c.avatarImg.src = defaultAvatar(d.user.nickname); }; c.avatarImg.src = d.av || defaultAvatar(d.user.nickname); }
+    if (liftMode) for (const d of live) { d.c.holdKneel = true; d.c.auraBoost = 1.8; startLift(d.c); }
+    else if (live[0] && maxWait <= 0) await camFocus(live[0].c);
+    else if (live[0]) camFocus(live[0].c);
+    if (maxWait <= 0 && (cfg.layout.card.delay || 0) > 0) await sleep(cfg.layout.card.delay * 1000);
+    // thẻ quẻ + giọng đọc ngay lập tức
+    const first = group[0];
+    if (!previewHold) {
+      if (group.length > 1) showCard({ group: group.map(d => ({ user: d.user, tier: d.tier, fortune: d.fortune, gift: (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || 'quà'), coins: d.coins })), user: first.user, tier: first.tier, fortune: first.fortune, gift: first.gift, coins: first.coins, noFrame: true });
+      else showCard({ user: first.user, tier: first.tier, fortune: first.fortune, gift: (first.repeat > 1 ? first.repeat + ' ' : '') + (first.gift || 'quà'), coins: first.coins, avatar: first.av, noFrame: liftMode });
     }
-    if ((cfg.layout.card.delay || 0) > 0) await sleep(cfg.layout.card.delay * 1000);
-    if (!previewHold) showCard({ user: d.user, tier, fortune, gift, coins: d.coins, avatar: av, noFrame: liftMode });
-    const voiceP = AudioMgr.say(voiceText);
-    const secs = (tier.cardSeconds > 0 ? tier.cardSeconds : cfg.scene.cardSeconds);
-    await Promise.all([voiceP, sleep(secs * 1000)]);
+    const busy = donorQueue.length > 0;
+    const text = group.length > 1 ? groupVoice(group) : (busy || maxWait > 0 && !first.fullText ? first.shortText : (first.fullText || donorVoice(first, false)));
+    let voiceDone = false; const voiceP = AudioMgr.say(text, { cuttable: true }).then(() => { voiceDone = true; });
+    const secs = Math.max(...group.map(d => d.tier.cardSeconds > 0 ? d.tier.cardSeconds : cfg.scene.cardSeconds));
+    const tStart = now; let cut = false;
+    // chờ đọc xong + đủ thời gian hiện thẻ; nếu có người mới chờ sắp quá hạn thì nhường lượt
+    await new Promise(res => {
+      const iv = setInterval(() => {
+        const el = now - tStart;
+        if (voiceDone && el >= secs) { clearInterval(iv); return res(); }
+        if (maxWait > 0 && donorQueue.length) {
+          const age = now - donorQueue[0].at;
+          if (voiceDone && el >= 2.5) { clearInterval(iv); return res(); }
+          if (age >= Math.max(1, maxWait - 2) && el >= 2.5) { cut = true; clearInterval(iv); return res(); }
+        }
+      }, 50);
+    });
+    if (cut) AudioMgr.cutThanks();
     let fromRect = previewHold ? null : cardAvatarRect();
-    if (lift && c.lift) { const hh = c.lift.h; fromRect = { x: c.lift.x - hh * 0.3, y: c.lift.y - hh * 1.05, w: hh * 0.6 }; }
     if (!previewHold) hideCard();
-    addToGallery({ user: d.user, tier, avatar: av, from: fromRect });
-    if (lift) { c.holdKneel = false; endLift(c); c.auraBoost = 1; const t2 = now; await waitUntil(() => !c.lift || c.dead || now - t2 > 4); }
-    c.donorPending = false; c.lastActive = now;
-    await sleep(700);
-  } catch (e) { window.api.log('Lỗi donate: ' + e.message, 'error'); }
+    for (const d of group) {
+      let fr = fromRect;
+      if (d.c && d.c.lift) { const hh = d.c.lift.h; fr = { x: d.c.lift.x - hh * 0.3, y: d.c.lift.y - hh * 1.05, w: hh * 0.6 }; }
+      addToGallery({ user: d.user, tier: d.tier, avatar: d.av, from: fr });
+    }
+    const landing = [];
+    for (const d of live) {
+      const c = d.c; c.holdKneel = false; c.auraBoost = 1;
+      if (liftMode) endLift(c);
+      landing.push((async () => { const t2 = now; await waitUntil(() => !c.lift || c.dead || now - t2 > 4); c.liftSlot = null; c.donorPending = false; c.lastActive = now; })());
+    }
+    if (!donorQueue.length) { await Promise.all(landing); await sleep(500); } else await sleep(150);
+  } catch (e) { window.api.log('Lỗi donate: ' + e.message, 'error'); for (const d of group) if (d.c) { d.c.donorPending = false; d.c.holdKneel = false; } }
   donorBusy = false;
   pumpDonors();
 }
@@ -1062,7 +1116,18 @@ function showCard(o, instant) {
     const lv = fe.querySelector('.ft-level'); lv.textContent = o.tier.fortuneLevel || 'Cát'; lv.style.display = F.showLevel === false ? 'none' : '';
     const vs = fe.querySelector('.ft-verse'); vs.innerHTML = (o.fortune.verse || []).map(v => escapeHtml(v)).join('<br>'); vs.style.display = F.showVerse === false ? 'none' : '';
     const mn = fe.querySelector('.ft-meaning'); mn.textContent = o.fortune.meaning || ''; mn.style.display = F.showMeaning === false ? 'none' : '';
-    const sub = fe.querySelector('.ft-sub'); if (sub) sub.textContent = [o.user.nickname, L.showTier !== false ? fill(L.tierText ?? '✦ {tier} ✦', V) : '', L.showGift !== false ? fill(L.giftText ?? 'Cúng dường {gift} · {coins} xu', V) : ''].filter(Boolean).join('  ·  ');
+    if (o.group && o.group.length > 1) { // nhiều người cùng lúc: mỗi người một dòng quẻ
+      fe.firstChild.innerHTML = o.group.map(() => '<div class="ft-row"><div class="ft-sub"></div><div class="ft-title"><span class="ft-name"></span><span class="ft-level"></span></div><div class="ft-verse"></div></div>').join('');
+      fe.firstChild.classList.add('multi');
+      fe.querySelectorAll('.ft-row').forEach((row, i) => {
+        const g = o.group[i], GV = cardVars(g);
+        row.querySelector('.ft-sub').textContent = [g.user.nickname, L.showGift !== false ? fill(L.giftText ?? 'Cúng dường {gift} · {coins} xu', GV) : ''].filter(Boolean).join('  ·  ');
+        row.querySelector('.ft-name').textContent = fill(F.titleText ?? 'Quẻ {fortuneName}', GV);
+        const lv2 = row.querySelector('.ft-level'); lv2.textContent = g.tier.fortuneLevel || 'Cát'; lv2.style.display = F.showLevel === false ? 'none' : '';
+        const vs2 = row.querySelector('.ft-verse'); vs2.textContent = (g.fortune.verse || []).join(' · '); vs2.style.display = F.showVerse === false ? 'none' : '';
+      });
+    }
+    const sub = o.group && o.group.length > 1 ? null : fe.querySelector('.ft-sub'); if (sub) sub.textContent = [o.user.nickname, L.showTier !== false ? fill(L.tierText ?? '✦ {tier} ✦', V) : '', L.showGift !== false ? fill(L.giftText ?? 'Cúng dường {gift} · {coins} xu', V) : ''].filter(Boolean).join('  ·  ');
     layer.appendChild(fe);
   }
   if (instant) { el.classList.add('show'); fe && fe.classList.add('show'); }

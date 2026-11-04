@@ -204,6 +204,9 @@
       <label>Kiểu hiển thị khi donate<select data-k="donate.style"><option value="lift">Nhân vật quỳ lạy bay lên giữa màn hình + khung quẻ</option><option value="card">Thẻ avatar + khung trang trí + khung quẻ (kiểu cũ)</option></select></label>
       <label>Chiều cao nhân vật khi bay lên (px)<input type="number" data-k="donate.liftHeight"></label>
       <label>Vị trí chân nhân vật (Y) · tâm (X)<span class="row"><input type="number" data-k="donate.liftY" style="width:90px"><input type="number" data-k="donate.liftX" style="width:90px"></span></label>
+      <label>Mỗi người phải thấy + nghe quẻ trong vòng (giây, 0 = tắt, đọc lần lượt đầy đủ)<input type="number" step="0.5" min="0" data-k="donate.maxWait"></label>
+      <label>Nhiều người donate cùng lúc: cho bay lên tối đa (người)<input type="number" min="1" max="4" data-k="donate.groupMax"></label>
+      <label>Lời đọc ngắn khi đang đông người donate<input data-k="donate.shortTemplate"></label>
     </div>
     <div class="grid3">
       <div>

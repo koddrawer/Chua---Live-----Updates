@@ -1,4 +1,4 @@
 {
-  "version": "1.0.27",
-  "notes": "Sửa: người donate phải chờ lượt bị biến mất nên hiện lại khung avatar cũ — nay luôn giữ nhân vật và bay lên, không hiện khung"
+  "version": "1.0.28",
+  "notes": "Donate nhanh: mỗi người donate thấy quẻ + nghe đọc trong vòng 5s; đông người thì đọc ngắn, nhường lượt, cho nhiều người bay lên cùng lúc"
 }

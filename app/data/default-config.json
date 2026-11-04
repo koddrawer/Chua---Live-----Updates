@@ -288,6 +288,9 @@
     "liftHeight": 300,
     "liftY": 760,
     "liftX": 360,
-    "liftSeconds": 1.4
+    "liftSeconds": 1.4,
+    "maxWait": 5,
+    "groupMax": 3,
+    "shortTemplate": "Cảm ơn {name}. Quẻ {fortuneName}, {level}. {verse}."
   }
 }

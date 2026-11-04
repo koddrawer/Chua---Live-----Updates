@@ -163,10 +163,14 @@
   A.sermonState = () => ({ sec: S.sec, line: S.line, playing: S.playing, paused: S.paused });
 
   // ---------- Giọng cảm ơn (ưu tiên) ----------
-  const queue = []; let thanksBusy = false; let resumeTimer = null;
+  const queue = []; let thanksBusy = false; let resumeTimer = null; let curThanks = null;
   A.say = function (text, opts = {}) {
     if (!text) return Promise.resolve();
     if (opts.low && (queue.length > 1 || thanksBusy)) return Promise.resolve();
+    if (!opts.low) { // lời cảm ơn donate: bỏ các câu trả lời bình luận đang chờ / đang đọc
+      for (let i = queue.length - 1; i >= 0; i--) if (queue[i].opts.low) queue.splice(i, 1)[0].res();
+      if (curThanks && curThanks.low) { const c = curThanks; c.cancelled = true; c.cancel && c.cancel(); }
+    }
     return new Promise(res => { queue.push({ text, opts, res }); pump(); });
   };
   A.prefetchThanks = t => getVoiceURL(t, cfg.voice.thanksVoice || cfg.voice.voice, cfg.voice.thanksRate || 0, 0).catch(() => {});
@@ -178,13 +182,19 @@
     while (queue.length) {
       const it = queue.shift();
       if (cfg.voice.engine === 'off') { it.res(); continue; }
-      const ctl = {};
+      const ctl = { low: !!it.opts.low }; curThanks = ctl;
       await speakWith(thanksEl, it.text, cfg.voice.thanksVoice || cfg.voice.voice, cfg.voice.thanksRate || 0, 0, cfg.voice.thanksVolume, ctl);
       it.res();
     }
     thanksBusy = false;
     resumeTimer = setTimeout(() => { if (!thanksBusy) resumeSermon(); }, (cfg.voice.resumeDelay || 1) * 1000);
   }
+  // ngắt ngay lời cảm ơn đang đọc (nhường cho người donate kế tiếp)
+  A.cutThanks = function () {
+    while (queue.length) queue.shift().res();
+    const c = curThanks; curThanks = null;
+    if (c) { if (c.synth) speechSynthesis.cancel(); if (c.silent) clearTimeout(c.timer); c.cancelled = true; c.cancel && c.cancel(); }
+  };
   A.speaking = () => thanksBusy;
   A.queueLength = () => queue.length;
 
