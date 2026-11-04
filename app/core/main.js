@@ -619,7 +619,22 @@ ipcMain.handle('tts:count', () => ttsCacheSize());
 ipcMain.handle('avatar', (_e, url) => fetchAvatar(url));
 ipcMain.on('simulate', (_e, ev) => emitLive(ev));
 ipcMain.on('stage:cmd', (_e, cmd) => toStage('stage-cmd', cmd));
-ipcMain.on('stage:report', (_e, data) => toPanel('stage-report', data));
+let lastStageReport = null;
+ipcMain.on('stage:report', (_e, data) => { lastStageReport = { at: Date.now(), data }; toPanel('stage-report', data); });
+// lưu trạng thái màn hình LIVE (người donate đang chờ, avatar treo cạnh Phật) để khởi động lại / cập nhật không bị mất
+const STATE_DIR = path.join(USER, 'state');
+ipcMain.on('state:save', (_e, name, data) => { if (!/^[a-z-]+$/.test(name)) return; try { const f = path.join(STATE_DIR, name + '.json'); writeJSON(f + '.tmp', { at: Date.now(), data }); fs.renameSync(f + '.tmp', f); } catch (e) { console.log('state save', e.message); } });
+ipcMain.handle('state:load', (_e, name) => { if (!/^[a-z-]+$/.test(name)) return null; try { return JSON.parse(fs.readFileSync(path.join(STATE_DIR, name + '.json'), 'utf8')); } catch { return null; } });
+// chờ màn hình LIVE xử lý xong người donate đang dở rồi mới khởi động lại (tối đa 45s)
+async function relaunchWhenIdle() {
+  const t0 = Date.now();
+  while (Date.now() - t0 < 45000) {
+    const r = lastStageReport; if (!r || Date.now() - r.at > 5000 || !(r.data && r.data.donorQueue > 0)) break;
+    if (Date.now() - t0 < 1500) log('Đang có người donate chờ đọc quẻ — đợi xong rồi mới khởi động lại để cập nhật...', 'warn');
+    await new Promise(res => setTimeout(res, 1000));
+  }
+  relaunch();
+}
 ipcMain.on('log', (_e, msg, level) => log(msg, level));
 ipcMain.handle('stage:open', () => { createStage(); return true; });
 ipcMain.handle('stage:close', () => { if (stageWin) stageWin.close(); return true; });
@@ -679,7 +694,7 @@ ipcMain.handle('frame:delete', (_e, id) => {
   writeJSON(path.join(DIRS.frames, 'frames.json'), list); fs.rmSync(path.join(DIRS.frames, path.basename(file)), { force: true }); refreshAssets(); return true;
 });
 ipcMain.handle('update:check', async () => { try { return await checkUpdate(); } catch (e) { return { error: e.message }; } });
-ipcMain.handle('update:apply', async () => { try { const r = await applyUpdate(); if (r.ok) setTimeout(relaunch, 1200); return r; } catch (e) { return { error: e.message }; } });
+ipcMain.handle('update:apply', async () => { try { const r = await applyUpdate(); if (r.ok) setTimeout(relaunchWhenIdle, 1200); return r; } catch (e) { return { error: e.message }; } });
 ipcMain.handle('update:rollback', () => { fs.rmSync(path.join(C.updatesRoot, 'current.json'), { force: true }); setTimeout(relaunch, 500); return true; });
 ipcMain.handle('config:export', async () => {
   const r = await dialog.showSaveDialog(panelWin, { defaultPath: 'chua-live-' + (config.tiktok.username || 'cau-hinh') + '.json', filters: [{ name: 'Cấu hình', extensions: ['json'] }] });

@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('api', {
   simulate: ev => ipcRenderer.send('simulate', ev),
   stageCmd: c => ipcRenderer.send('stage:cmd', c),
   report: d => ipcRenderer.send('stage:report', d),
+  saveState: (n, d) => ipcRenderer.send('state:save', n, d),
+  loadState: n => ipcRenderer.invoke('state:load', n),
   log: (m, l) => ipcRenderer.send('log', m, l),
   openStage: () => ipcRenderer.invoke('stage:open'),
   closeStage: () => ipcRenderer.invoke('stage:close'),

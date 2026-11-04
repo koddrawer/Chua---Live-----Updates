@@ -17,6 +17,7 @@ const byUser = new Map();  // userId -> char
 const recentJoin = new Map(); // userId -> time
 const joinQueue = [];
 const donorQueue = [];
+const donorsInProgress = []; // đang hiện quẻ (chưa xong) — vẫn lưu lại phòng khi app khởi động lại
 let donorBusy = false;
 let now = 0, lastSpawn = 0, lastIdle = 0;
 let scale = 1, dpr = 1, offX = 0, offY = 0;
@@ -867,21 +868,34 @@ function onGift(ev) {
   const tier = tierFor(coins); if (!tier || coins < tier.min) return;
   // gộp nếu người này đang chờ trong hàng
   const q = donorQueue.find(d => d.user.id === u.id);
-  if (q) { q.coins += coins; q.gift = ev.giftName; q.repeat = (q.repeat || 1) + (ev.repeat || 1); q.tier = tierFor(q.coins); return; }
+  if (q) { q.coins += coins; q.gift = ev.giftName; q.repeat = (q.repeat || 1) + (ev.repeat || 1); q.tier = tierFor(q.coins); saveDonors(); return; }
   let c = byUser.get(u.id);
   if (!c || c.removing) {
     const qi = joinQueue.findIndex(x => x.id === u.id); if (qi >= 0) joinQueue.splice(qi, 1);
     c = spawn({ kind: 'donor', user: u, y: 1240 }); // đầy màn hình -> null, tới lượt sẽ tạo lại
   }
   if (c) { c.kind = 'donor'; c.donorPending = true; c.nameUntil = Math.max(c.nameUntil, now + cfg.scene.nameSeconds); }
-  const d = { user: u, c, coins, gift: ev.giftName, repeat: ev.repeat || 1, tier, at: now, fortune: pickFortune() };
+  const d = { user: u, c, coins, gift: ev.giftName, repeat: ev.repeat || 1, tier, at: now, wall: ev.wall || Date.now(), fortune: ev.fortune || pickFortune() };
   // tải trước giọng đọc + avatar ngay khi nhận quà để lúc tới lượt là đọc được liền
   d.avP = u.avatar ? window.api.avatar(u.avatars && u.avatars.length ? u.avatars : u.avatar).catch(() => null) : Promise.resolve(null);
   d.shortText = donorVoice(d, true);
   if (donorBusy || donorQueue.length) AudioMgr.prefetchThanks(d.shortText);
   else { d.fullText = donorVoice(d, false); AudioMgr.prefetchThanks(d.fullText); }
-  donorQueue.push(d);
+  donorQueue.push(d); saveDonors();
   pumpDonors();
+}
+// ---- lưu / khôi phục người donate đang chờ (cập nhật nóng, khởi động lại, app lỗi) ----
+function saveDonors() {
+  try { window.api.saveState('donors', [...donorsInProgress, ...donorQueue].map(d => ({ user: d.user, coins: d.coins, gift: d.gift, repeat: d.repeat, fortune: d.fortune, wall: d.wall }))); } catch {}
+}
+async function restoreDonors() {
+  try {
+    const st = await window.api.loadState('donors'); const list = (st && st.data) || [];
+    const fresh = list.filter(r => r && r.user && r.user.id && Date.now() - (r.wall || 0) < 3 * 3600e3);
+    if (!fresh.length) return;
+    window.api.log(`Khôi phục ${fresh.length} người donate đang chờ đọc quẻ (từ lần chạy trước)`, 'ok');
+    for (const r of fresh) onGift({ user: r.user, coins: r.coins, giftName: r.gift, repeat: r.repeat, fortune: r.fortune, wall: r.wall });
+  } catch (e) { window.api.log('Không khôi phục được hàng donate: ' + e.message, 'warn'); }
 }
 function cardVars(o) {
   return { name: o.user.nickname, tier: o.tier.label || '', gift: o.gift, coins: o.coins, fortuneName: o.fortune.name || '', level: o.tier.fortuneLevel || '', fortune: o.fortune.meaning || '', verse: (o.fortune.verse || []).join(', ') };
@@ -929,6 +943,7 @@ async function pumpDonors() {
     const t0 = now;
     // đang có nhiều người chờ -> cho lên cùng lúc (tối đa groupMax người)
     group = donorQueue.splice(0, Math.min(groupMax, donorQueue.length));
+    donorsInProgress.push(...group); saveDonors();
     for (const d of group) {
       const c = donorChar(d); if (!c) continue;
       c.liftSlot = { i: group.indexOf(d), n: group.length };
@@ -974,6 +989,8 @@ async function pumpDonors() {
       if (d.c && d.c.lift) { const hh = d.c.lift.h; fr = { x: d.c.lift.x - hh * 0.3, y: d.c.lift.y - hh * 1.05, w: hh * 0.6 }; }
       addToGallery({ user: d.user, tier: d.tier, avatar: d.av, from: fr });
     }
+    for (const d of group) { const i = donorsInProgress.indexOf(d); if (i >= 0) donorsInProgress.splice(i, 1); }
+    saveDonors();
     const landing = [];
     for (const d of live) {
       const c = d.c; c.holdKneel = false; c.auraBoost = 1;
@@ -981,7 +998,7 @@ async function pumpDonors() {
       landing.push((async () => { const t2 = now; await waitUntil(() => !c.lift || c.dead || now - t2 > 4); c.liftSlot = null; c.donorPending = false; c.lastActive = now; })());
     }
     if (!donorQueue.length) { await Promise.all(landing); await sleep(500); } else await sleep(150);
-  } catch (e) { window.api.log('Lỗi donate: ' + e.message, 'error'); for (const d of group) if (d.c) { d.c.donorPending = false; d.c.holdKneel = false; } }
+  } catch (e) { window.api.log('Lỗi donate: ' + e.message, 'error'); for (const d of group) { if (d.c) { d.c.donorPending = false; d.c.holdKneel = false; } const i = donorsInProgress.indexOf(d); if (i >= 0) donorsInProgress.splice(i, 1); } saveDonors(); }
   donorBusy = false;
   pumpDonors();
 }
@@ -1018,18 +1035,35 @@ function addToGallery(o) {
   const f = o.from || { x: W / 2 - size / 2, y: 300, w: size };
   el.style.left = f.x + 'px'; el.style.top = f.y + 'px'; el.style.transform = `scale(${(f.w / size).toFixed(3)})`;
   document.getElementById('gallery').appendChild(el);
-  const item = { uid: o.user.id, el, size, h: fh + (nm ? Math.max(11, size * 0.16) * 1.5 : 0), born: now, side: -1 };
+  const item = { uid: o.user.id, el, size, h: fh + (nm ? Math.max(11, size * 0.16) * 1.5 : 0), born: now, side: -1, rec: { user: o.user, tierMin: o.tier.min, size, wall: Date.now() } };
   // chọn bên ít chỗ đã dùng hơn
   const used = [0, 1].map(sd => gallery.filter(g => g.side === sd).reduce((a, g) => a + g.size * g.h, 0));
   item.side = used[0] === used[1] ? (gallerySide++ % 2) : (used[0] < used[1] ? 0 : 1);
-  gallery.push(item);
+  gallery.push(item); saveGallery();
   requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add('fly'); layoutGallery(); }));
 }
 function removeGalleryItem(g, instant) {
-  gallery = gallery.filter(x => x !== g);
+  gallery = gallery.filter(x => x !== g); saveGallery();
   if (instant) { g.el.remove(); return; }
   g.el.classList.add('gone');
   setTimeout(() => g.el.remove(), 1300);
+}
+let galleryRestoring = false;
+function saveGallery() { if (galleryRestoring) return; try { window.api.saveState('gallery', gallery.slice().sort((a, b) => a.born - b.born).map(g => g.rec).filter(Boolean)); } catch {} }
+async function restoreGallery() {
+  try {
+    const st = await window.api.loadState('gallery'); const list = (st && st.data) || [];
+    if (!list.length) return;
+    galleryRestoring = true;
+    for (const r of list) {
+      if (!r.user || !r.user.id) continue;
+      const tier = (cfg.tiers || []).find(t => t.min === r.tierMin) || tierFor(r.tierMin || 1);
+      const av = r.user.avatar ? await Promise.race([window.api.avatar(r.user.avatars && r.user.avatars.length ? r.user.avatars : r.user.avatar).catch(() => null), sleep(2500).then(() => null)]) : null;
+      addToGallery({ user: r.user, tier, avatar: av, from: null });
+      const it = gallery[gallery.length - 1]; if (it && it.uid === r.user.id) it.rec.wall = r.wall || it.rec.wall;
+    }
+  } catch (e) { console.error(e); }
+  galleryRestoring = false; saveGallery();
 }
 function galleryAreas() {
   const G = cfg.gallery || {};
@@ -1259,6 +1293,7 @@ async function main() {
   await applyAll(true);
   videoList = d.videos || []; initBg();
   if (cfg.voice.sermonEnabled) setTimeout(() => AudioMgr.startSermon(), 1500);
+  restoreGallery(); setTimeout(restoreDonors, 2500);
   window.api.on('config', async c => { const charsChanged = JSON.stringify(c.characters) !== JSON.stringify(cfg.characters); const styleChanged = JSON.stringify(c.style) !== JSON.stringify(cfg.style); cfg = c; if (styleChanged) slots.forEach(sl => { if (sl.img) sl.buf.ready = false; }); if (charsChanged || styleChanged) await loadPacks(); applyAll(false); if (previewHold) showPreview(); if (gallery.length) layoutGallery(); });
   window.api.on('assets', async a => { charList = a.characters; frameList = a.frames; musicList = a.music; if (a.videos) videoList = a.videos; await loadPacks(); applyAll(false); });
   window.api.on('tiktok-state', st => { try { window.LiveExtra && LiveExtra.onTikTok(st); } catch {} });

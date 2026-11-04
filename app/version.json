@@ -1,4 +1,4 @@
 {
-  "version": "1.0.28",
-  "notes": "Donate nhanh: mỗi người donate thấy quẻ + nghe đọc trong vòng 5s; đông người thì đọc ngắn, nhường lượt, cho nhiều người bay lên cùng lúc"
+  "version": "1.0.29",
+  "notes": "Giữ lại người donate đang chờ đọc quẻ và avatar treo cạnh Phật khi cập nhật nóng / khởi động lại; cập nhật chờ đọc xong quẻ rồi mới khởi động lại"
 }
