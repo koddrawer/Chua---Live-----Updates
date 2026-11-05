@@ -1,4 +1,4 @@
 {
-  "version": "1.0.34",
-  "notes": "Sửa lỗi đứng hình màn hình LIVE khi chỉnh kích thước nhân vật; ô số chỉ áp dụng khi gõ xong"
+  "version": "1.0.35",
+  "notes": "Dòng chữ dưới cùng: chặn giá trị cỡ chữ/vị trí sai làm chữ biến mất; sửa đường dẫn font"
 }

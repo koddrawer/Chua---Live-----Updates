@@ -1374,11 +1374,12 @@ function applyLayout() {
     el.classList.toggle('blur', o.blur !== false && o.opacity > 0.02);
   }
   const tb = document.getElementById('titleBar');
-  tb.textContent = L.title.text || '';
-  let tsz = L.title.size || 30; if (isPixel()) tsz = Math.max(16, Math.round(tsz / 8) * 8); // font pixel nét hơn ở bội số 8
+  const ttxt = String(L.title.text ?? '').replace(/\r/g, '');
+  tb.textContent = ttxt;
+  let tsz = Math.max(10, Math.min(96, +L.title.size || 30)); if (isPixel()) tsz = Math.max(16, Math.round(tsz / 8) * 8); // font pixel nét hơn ở bội số 8
   tb.style.fontSize = tsz + 'px';
-  if (L.title.bottom != null) { tb.style.top = 'auto'; tb.style.bottom = L.title.bottom + 'px'; } else { tb.style.bottom = 'auto'; tb.style.top = L.title.y + 'px'; }
-  tb.style.display = L.title.show && L.title.text ? '' : 'none';
+  if (L.title.bottom != null && isFinite(+L.title.bottom)) { tb.style.top = 'auto'; tb.style.bottom = Math.max(0, Math.min(1100, +L.title.bottom)) + 'px'; } else { tb.style.bottom = 'auto'; tb.style.top = Math.max(0, Math.min(1240, +L.title.y || 1232)) + 'px'; }
+  tb.style.display = L.title.show !== false && ttxt.trim() ? '' : 'none';
   slots.forEach(sl => sl.el.playbackRate = cfg.scene.videoRate || 1);
 }
 let editMode = false;
