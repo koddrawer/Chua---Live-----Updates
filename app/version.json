@@ -1,4 +1,4 @@
 {
-  "version": "1.0.33",
-  "notes": "Lời chúc donate đọc đầy đủ theo mẫu mới; bỏ quy định 5 giây; ai donate trước đọc trước, không bỏ sót"
+  "version": "1.0.34",
+  "notes": "Sửa lỗi đứng hình màn hình LIVE khi chỉnh kích thước nhân vật; ô số chỉ áp dụng khi gõ xong"
 }

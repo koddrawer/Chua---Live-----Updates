@@ -31,8 +31,10 @@ function bindInputs() {
       else v = el.value;
       window.api.setConfig(k, v);
     };
-    el.addEventListener(el.tagName === 'TEXTAREA' || el.type === 'text' || el.type === 'password' || !el.type ? 'change' : 'input', handler);
-    if (el.type === 'number') el.addEventListener('change', handler);
+    if (el.type === 'number') { // gõ số: chờ gõ xong mới áp dụng (tránh áp dụng giá trị dở dang như 3 → 30 → 300)
+      let tm = null; el.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(handler, 700); });
+      el.addEventListener('change', () => { clearTimeout(tm); handler(); });
+    } else el.addEventListener(el.tagName === 'TEXTAREA' || el.type === 'text' || el.type === 'password' || !el.type ? 'change' : 'input', handler);
     if (el.type === 'range') { const sp = document.createElement('span'); sp.className = 'rv'; el.insertAdjacentElement('afterend', sp); el.addEventListener('input', () => sp.textContent = el.value); }
   });
 }

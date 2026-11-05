@@ -1,5 +1,11 @@
 // Chùa Live — màn hình 9:16: nhân vật leo bậc thang lên chùa
 'use strict';
+// chặn lỗi bán kính âm (vd. chỉnh kích thước nhân vật rất nhỏ) làm đứng hình
+(function () { const P = CanvasRenderingContext2D.prototype; const arc = P.arc, ell = P.ellipse, rg = P.createRadialGradient;
+  P.arc = function (x, y, r, a, b, c) { return arc.call(this, x, y, r > 0 ? r : 0, a, b, c); };
+  P.ellipse = function (x, y, rx, ry, ro, a, b, c) { return ell.call(this, x, y, rx > 0 ? rx : 0, ry > 0 ? ry : 0, ro, a, b, c); };
+  P.createRadialGradient = function (x0, y0, r0, x1, y1, r1) { return rg.call(this, x0, y0, r0 > 0 ? r0 : 0, x1, y1, r1 > 0 ? r1 : 0); }; })();
+
 const W = 720, H = 1280;
 const canvas = document.getElementById('scene');
 let ctx = canvas.getContext('2d');
@@ -209,10 +215,10 @@ function blessText(c) {
 const easeIO = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 function liftTarget(c) {
   const D = cfg.donate || {}; const F = cfg.layout.fortune || {};
-  const h = D.liftHeight || 300;
+  const h = Math.max(60, Math.min(700, +D.liftHeight || 300));
   const feet = Math.min(D.liftY || 760, (F.show !== false ? (F.y ?? 725) : 1100) - 24);
   const sl = c.liftSlot;
-  if (sl && sl.slot != null) { const g = slotGeomFor(sl); return { x: g.cx, y: g.top + g.ch * ((cfg.donate && cfg.donate.charSink) ?? 0.08), h: D.slotCharHeight || 200 }; }
+  if (sl && sl.slot != null) { const g = slotGeomFor(sl); return { x: g.cx, y: g.top + g.ch * ((cfg.donate && cfg.donate.charSink) ?? 0.08), h: Math.max(60, Math.min(600, +D.slotCharHeight || 200)) }; }
   if (sl && sl.n > 1) { const sc = sl.n === 2 ? 0.85 : 0.72; const gap = Math.min(220, 540 / sl.n); return { x: Math.max(90, Math.min(W - 90, (D.liftX || W / 2) + (sl.i - (sl.n - 1) / 2) * gap)), y: feet, h: h * sc }; }
   return { x: D.liftX || W / 2, y: feet, h };
 }
@@ -731,12 +737,14 @@ function frame(t) {
   lastFrameAt = performance.now();
   const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t; now += dt;
   fpsAcc += dt; fpsN++; if (fpsAcc > 1) { fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
-  if (cfg && Object.keys(packs).length) tick(dt);
-  render(dt);
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame); // luôn hẹn khung tiếp theo trước — lỗi vẽ 1 khung không làm đứng hình
+  try { if (cfg && Object.keys(packs).length) tick(dt); } catch (e) { frameErr('tick', e); }
+  try { render(dt); } catch (e) { frameErr('render', e); ctx = mainCtx; try { ctx.reset(); } catch {} }
 }
+let lastFrameErr = 0;
+function frameErr(where, e) { console.error(e); if (Date.now() - lastFrameErr > 10000) { lastFrameErr = Date.now(); try { window.api.log('Lỗi màn hình LIVE (' + where + '): ' + e.message, 'error'); } catch {} } }
 // nếu cửa sổ bị che/thu nhỏ khiến requestAnimationFrame dừng, vẫn chạy logic bằng bộ hẹn giờ
-setInterval(() => { const t = performance.now(); if (t - lastFrameAt > 120) { const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t; now += dt; if (cfg && Object.keys(packs).length) tick(dt); } }, 33);
+setInterval(() => { const t = performance.now(); if (t - lastFrameAt > 120) { const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t; now += dt; try { if (cfg && Object.keys(packs).length) tick(dt); } catch (e) { frameErr('tick', e); } } }, 33);
 function tick(dt) {
   const s = cfg.scene;
   // sinh nhân vật cho người xem đang chờ (hàng chờ dài thì sinh nhanh hơn)
@@ -1029,7 +1037,7 @@ function pickQFrame() {
 }
 function slotGeom(i) {
   const D = cfg.donate || {};
-  const cw = D.cardWidth || 216, gap = D.cardGap ?? 10, ch = cw * 300 / 220;
+  const cw = Math.max(100, Math.min(320, +D.cardWidth || 216)), gap = D.cardGap ?? 10, ch = cw * 300 / 220;
   const cx = (D.liftX || W / 2) + (i - 1) * (cw + gap);
   return { cx, left: cx - cw / 2, top: D.cardY ?? 560, cw, ch };
 }
