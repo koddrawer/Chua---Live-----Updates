@@ -1084,6 +1084,7 @@ async function addStageMember(d, slot) {
   const m = { d, slot, read: false, readEnd: 0, joined: now, frame: stageMembers.length ? stageMembers[0].frame : pickQFrame() }; // các thẻ cùng lúc dùng chung 1 khung -> thẳng hàng
   stageMembers.push(m); donorsInProgress.push(d); saveDonors();
   if (c) {
+    c.stageTok = (c.stageTok || 0) + 1;
     c.liftSlot = { slot, frame: m.frame }; kneel(c, d.tier.kneelRounds ?? cfg.scene.kneelRounds); c.auraOn = true;
     c.holdKneel = true; c.auraBoost = 1.6; startLift(c);
   }
@@ -1099,7 +1100,7 @@ function releaseStageMember(m) {
   let fr = null; if (c && c.lift) { const hh = c.lift.h; fr = { x: c.lift.x - hh * 0.3, y: c.lift.y - hh * 1.05, w: hh * 0.6 }; }
   addToGallery({ user: d.user, tier: d.tier, avatar: d.av, from: fr });
   const j = donorsInProgress.indexOf(d); if (j >= 0) donorsInProgress.splice(j, 1); saveDonors();
-  if (c) { c.holdKneel = false; c.auraBoost = 1; endLift(c); (async () => { const t2 = now; await waitUntil(() => !c.lift || c.dead || now - t2 > 4); c.liftSlot = null; c.donorPending = false; c.lastActive = now; })(); }
+  if (c) { c.holdKneel = false; c.auraBoost = 1; endLift(c); const tok = c.stageTok; (async () => { const t2 = now; await waitUntil(() => !c.lift || c.dead || now - t2 > 4 || c.stageTok !== tok); if (c.stageTok !== tok || onStage(c)) return; c.liftSlot = null; c.donorPending = false; c.lastActive = now; })(); }
 }
 // nhận người mới vào thẻ trống; hết chỗ thì nhường chỗ của người đã được đọc xong
 function fillStage() {
