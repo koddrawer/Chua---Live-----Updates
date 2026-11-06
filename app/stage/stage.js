@@ -123,6 +123,15 @@ async function loadPacks() {
   }
   packs = next;
 }
+// người donate đang hiện cùng lúc không dùng chung 1 kiểu nhân vật
+function uniqueStagePack(c) {
+  const used = new Set(stageMembers.filter(m => m.d.c && m.d.c !== c).map(m => m.d.c.pack.id));
+  if (!used.has(c.pack.id)) return;
+  const free = Object.keys(packs).filter(id => !used.has(id) && (((cfg.characters.weights || {})[id] ?? 1) > 0));
+  if (!free.length) return;
+  c.pack = packs[free[Math.floor(Math.random() * free.length)]]; c.prev = null; c.xf = 1;
+  const k = animFrames(c.pack, 'kneel'); if (k && k.frames.length) c.frame = k.frames[0];
+}
 function pickPack() {
   const ids = Object.keys(packs); if (!ids.length) return null;
   const w = ids.map(id => Math.max(0, (cfg.characters.weights || {})[id] ?? 1));
@@ -1071,6 +1080,7 @@ const stageMembers = [];
 function freeSlot() { const used = new Set(stageMembers.map(m => m.slot)); const max = Math.max(1, Math.min(3, (cfg.donate && cfg.donate.groupMax) || 3)); const order = max === 1 ? [1] : max === 2 ? [1, 0] : [1, 0, 2]; return order.find(i => !used.has(i)); }
 async function addStageMember(d, slot) {
   const c = donorChar(d);
+  if (c) uniqueStagePack(c);
   const m = { d, slot, read: false, readEnd: 0, joined: now, frame: stageMembers.length ? stageMembers[0].frame : pickQFrame() }; // các thẻ cùng lúc dùng chung 1 khung -> thẳng hàng
   stageMembers.push(m); donorsInProgress.push(d); saveDonors();
   if (c) {

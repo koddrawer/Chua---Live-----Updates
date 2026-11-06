@@ -1,4 +1,4 @@
 {
-  "version": "1.0.35",
-  "notes": "Dòng chữ dưới cùng: chặn giá trị cỡ chữ/vị trí sai làm chữ biến mất; sửa đường dẫn font"
+  "version": "1.0.36",
+  "notes": "Nhiều người donate cùng lúc: mỗi người một kiểu nhân vật khác nhau, không bị trùng"
 }
