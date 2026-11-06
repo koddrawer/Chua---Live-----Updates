@@ -373,7 +373,9 @@ $('#vnStart').onclick = async () => { $('#vnStatus').textContent = VNST.starting
 $('#vnStop').onclick = async () => renderVN(await window.api.vieneu.stop());
 async function vnTest(role) { const r = await window.api.vieneu.test(role); if (!r.ok) { $('#vnStatus').textContent = 'Lỗi: ' + r.error; return; } const a = new Audio(URL.createObjectURL(new Blob([r.data], { type: 'audio/wav' }))); a.play(); }
 $('#vnTestS').onclick = () => vnTest('sermon'); $('#vnTestT').onclick = () => vnTest('thanks');
-$('#vnPre').onclick = async () => { $('#vnPre').disabled = true; const r = await window.api.vieneu.prerender(); $('#vnPre').disabled = false; $('#vnStatus').textContent = 'Đã tạo sẵn ' + r.ok + ' câu' + (r.fail ? ', lỗi ' + r.fail : ''); };
+$('#vnPre').onclick = () => { window.api.stageCmd({ type: 'prerender' }); $('#vnStatus').textContent = 'Đang tạo sẵn giọng cho bài giảng, quẻ, lời chúc… xem tiến độ ở Nhật ký (tab Kết nối LIVE). Màn hình LIVE phải đang mở.'; };
+$('#vnExport').onclick = async () => { const r = await window.api.vieneu.exportPack(); if (r.ok) $('#vnStatus').textContent = 'Đã xuất ' + r.count + ' câu ra ' + r.path; else if (!r.canceled) alert(r.error); };
+$('#vnImport').onclick = async () => { const r = await window.api.vieneu.importPack(); if (r.ok) $('#vnStatus').textContent = 'Đã nhập ' + r.count + ' câu có sẵn giọng VieNeu'; else if (!r.canceled) alert(r.error); };
 $('#vnClone').onclick = async () => {
   const name = $('#vnCloneName').value.trim() || 'Giọng của tôi';
   const f = await window.api.openDialog({ filters: [{ name: 'Ghi âm', extensions: ['wav', 'mp3', 'm4a', 'flac', 'ogg'] }] }); if (!f.length) return;

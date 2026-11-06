@@ -179,7 +179,18 @@
     }
     return new Promise(res => { queue.push({ text, opts, res }); pump(); });
   };
-  A.prefetchThanks = t => getVoiceURL(t, cfg.voice.thanksVoice || cfg.voice.voice, cfg.voice.thanksRate || 0, 0).catch(() => {});
+  // VieNeu: tách lời đọc thành các đoạn; đoạn không chứa tên/quà (câu quẻ, lời chúc chung...) dùng được giọng tạo sẵn
+  const vnMode = () => cfg && cfg.voice.engine === 'vieneu' && cfg.lang !== 'en';
+  A.segments = function (text, personal) {
+    const P = (personal || []).map(x => String(x ?? '').trim().toLowerCase()).filter(Boolean);
+    const parts = String(text).match(/[^.!?…,;:]+[.!?…,;:]*/g) || [String(text)];
+    const out = [];
+    for (const p of parts) { const t = p.trim(); if (!t) continue; const per = P.some(x => t.toLowerCase().includes(x)); const last = out[out.length - 1]; if (last && last.per === per) last.t += ' ' + t; else out.push({ t, per }); }
+    return out;
+  };
+  const thanksArgs = () => [cfg.voice.thanksVoice || cfg.voice.voice, cfg.voice.thanksRate || 0, 0];
+  A.prefetchThanks = (t, personal) => { if (!cfg) return Promise.resolve(); const segs = vnMode() && personal ? A.segments(t, personal).map(x => x.t) : [t]; return Promise.all(segs.map(x => getVoiceURL(x, ...thanksArgs()).catch(() => {}))); };
+  A.cacheText = (text, role) => role === 'sermon' ? getVoiceURL(text, cfg.voice.voice, cfg.voice.rate, cfg.voice.pitch) : getVoiceURL(text, ...thanksArgs());
   async function pump() {
     if (thanksBusy || !queue.length) return;
     clearTimeout(resumeTimer);
@@ -190,7 +201,12 @@
       if (cfg.voice.engine === 'off') { it.res(); continue; }
       const ctl = { low: !!it.opts.low }; curThanks = ctl;
       try { it.opts.onStart && it.opts.onStart(); } catch {}
-      await speakWith(thanksEl, it.text, cfg.voice.thanksVoice || cfg.voice.voice, cfg.voice.thanksRate || 0, 0, cfg.voice.thanksVolume, ctl);
+      const segs = vnMode() && it.opts.personal ? A.segments(it.text, it.opts.personal).map(x => x.t) : [it.text];
+      for (let i = 0; i < segs.length; i++) {
+        if (i + 1 < segs.length) getVoiceURL(segs[i + 1], ...thanksArgs()).catch(() => {}); // tải trước đoạn sau
+        const r = await speakWith(thanksEl, segs[i], ...thanksArgs(), cfg.voice.thanksVolume, ctl);
+        if (r === 'cancel' || ctl.cancelled) break;
+      }
       it.res();
     }
     thanksBusy = false;

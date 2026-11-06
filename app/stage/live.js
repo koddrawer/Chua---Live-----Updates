@@ -51,7 +51,7 @@ window.LiveExtra = (function () {
       lastReplyAt = nowT; if (uid) lastReplyUser.set(uid, nowT);
       const text = fill(rule.reply, { name: voiceName(ev.user && ev.user.nickname), comment: ev.text });
       addChat(null, fill(rule.reply, { name: (ev.user && ev.user.nickname) || '', comment: ev.text }), 'reply');
-      AudioMgr.say(text, { low: true });
+      AudioMgr.say(text, { low: true, personal: [voiceName(ev.user && ev.user.nickname), ev.text] });
     } else if (cv.readAll && nowT - lastReadAt > (cv.readGap ?? 8) * 1000) {
       const clean = String(ev.text).replace(/[^\p{L}\p{N}\s.,!?'-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
       if (clean.length < 2) return;

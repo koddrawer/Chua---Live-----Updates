@@ -455,15 +455,25 @@ async function vnStart() {
 }
 function vnStop() { vn.status = 'off'; if (vn.proc) { try { vn.proc.kill(); } catch {} vn.proc = null; } vnEmit(); }
 app.on('before-quit', () => { if (vn.proc) try { vn.proc.kill(); } catch {} });
+const refKeys = new Map();
+function refKey(ref) {
+  if (!ref) return '';
+  if (refKeys.has(ref)) return refKeys.get(ref);
+  let k = path.basename(ref); try { k = crypto.createHash('sha1').update(fs.readFileSync(ref)).digest('hex'); } catch {}
+  refKeys.set(ref, k); return k;
+}
 async function ttsVieneu(text, o = {}) {
   text = String(text || '').trim(); if (!text) return null;
   const c = vnCfg();
   const role = (o.voice && o.voice === config.voice.thanksVoice && config.voice.thanksVoice !== config.voice.voice) ? 'thanks' : 'sermon';
   const voice = role === 'thanks' ? (c.thanksVoice || c.voice) : c.voice;
   const ref = role === 'thanks' ? (c.thanksRef || '') : (c.sermonRef || '');
-  const key = crypto.createHash('sha1').update(['vieneu', voice, ref, text].join('|')).digest('hex');
+  // khoá theo NỘI DUNG file giọng mẫu (không theo đường dẫn) -> gói giọng mang sang máy khác vẫn dùng được
+  const key = crypto.createHash('sha1').update(['vieneu2', voice, refKey(ref), text].join('|')).digest('hex');
   const file = path.join(DIRS.ttsCache, key + '.wav');
   if (fs.existsSync(file)) return fs.readFileSync(file);
+  const oldFile = path.join(DIRS.ttsCache, crypto.createHash('sha1').update(['vieneu', voice, ref, text].join('|')).digest('hex') + '.wav');
+  if (fs.existsSync(oldFile)) { try { fs.renameSync(oldFile, file); return fs.readFileSync(file); } catch {} }
   if (vn.status !== 'ready') { const h = await vnHealth(); if (!(h && h.ok)) { if (!vn.proc && !vn.starting) vnStart(); throw new Error('Máy chủ VieNeu chưa sẵn sàng'); } vn.status = 'ready'; }
   const r = await net.fetch(vnBase() + '/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, voice: voice || undefined, ref_audio: ref || undefined }) });
   if (!r.ok) { let m = 'HTTP ' + r.status; try { m = (await r.json()).error || m; } catch {} throw new Error(m); }
@@ -654,6 +664,42 @@ ipcMain.handle('vieneu:prerender', async () => {
 });
 ipcMain.handle('tts:clear', () => { for (const f of fs.readdirSync(DIRS.ttsCache)) fs.rmSync(path.join(DIRS.ttsCache, f), { force: true }); return 0; });
 ipcMain.handle('tts:count', () => ttsCacheSize());
+// ---------- Gói giọng VieNeu: xuất / nhập để mang sang máy khác không cần tạo lại ----------
+ipcMain.handle('vieneu:exportPack', async () => {
+  const files = fs.readdirSync(DIRS.ttsCache).filter(f => f.endsWith('.wav'));
+  if (!files.length) return { ok: false, error: 'Chưa có giọng VieNeu nào được tạo sẵn' };
+  const r = await dialog.showSaveDialog(panelWin, { defaultPath: 'goi-giong-vieneu-' + new Date().toISOString().slice(0, 10) + '.zip', filters: [{ name: 'Gói giọng', extensions: ['zip'] }] });
+  if (r.canceled || !r.filePath) return { ok: false, canceled: true };
+  const AdmZip = loadLib('adm-zip'); const zip = new AdmZip();
+  for (const f of files) zip.addLocalFile(path.join(DIRS.ttsCache, f), 'tts-cache');
+  const c = vnCfg(); const refs = [c.sermonRef, c.thanksRef].filter(x => x && fs.existsSync(x));
+  for (const x of refs) zip.addLocalFile(x, 'voices');
+  zip.addFile('manifest.json', Buffer.from(JSON.stringify({ app: app.getName(), made: Date.now(), count: files.length, vieneu: { voice: c.voice, thanksVoice: c.thanksVoice, sermonRef: c.sermonRef ? path.basename(c.sermonRef) : '', thanksRef: c.thanksRef ? path.basename(c.thanksRef) : '' } }, null, 2)));
+  zip.writeZip(r.filePath);
+  log('Đã xuất gói giọng: ' + files.length + ' câu → ' + r.filePath, 'ok');
+  return { ok: true, count: files.length, path: r.filePath };
+});
+ipcMain.handle('vieneu:importPack', async () => {
+  const r = await dialog.showOpenDialog(panelWin, { properties: ['openFile'], filters: [{ name: 'Gói giọng', extensions: ['zip'] }] });
+  if (r.canceled || !r.filePaths[0]) return { ok: false, canceled: true };
+  try {
+    const AdmZip = loadLib('adm-zip'); const zip = new AdmZip(r.filePaths[0]);
+    let n = 0; const vdir = path.join(USER, 'user', 'voices'); fs.mkdirSync(vdir, { recursive: true }); fs.mkdirSync(DIRS.ttsCache, { recursive: true });
+    let man = {}; try { man = JSON.parse(zip.readAsText('manifest.json')); } catch {}
+    for (const e of zip.getEntries()) {
+      if (e.isDirectory) continue; const name = path.basename(e.entryName);
+      if (/^tts-cache\//.test(e.entryName) && /^[0-9a-f]{40}\.wav$/.test(name)) { fs.writeFileSync(path.join(DIRS.ttsCache, name), e.getData()); n++; }
+      else if (/^voices\//.test(e.entryName)) fs.writeFileSync(path.join(vdir, name), e.getData());
+    }
+    // dùng lại đúng giọng & giọng mẫu như máy đã tạo gói
+    const v = man.vieneu || {}; const nv = { ...(config.vieneu || {}) };
+    if (v.voice) nv.voice = v.voice; if (v.thanksVoice) nv.thanksVoice = v.thanksVoice;
+    if (v.sermonRef) nv.sermonRef = path.join(vdir, v.sermonRef); if (v.thanksRef) nv.thanksRef = path.join(vdir, v.thanksRef);
+    config.vieneu = nv; config.voice.engine = 'vieneu'; refKeys.clear(); saveConfig(); broadcast('config', config);
+    log('Đã nhập gói giọng: ' + n + ' câu có sẵn giọng VieNeu (bộ đọc đã chuyển sang VieNeu)', 'ok');
+    return { ok: true, count: n };
+  } catch (e) { log('Lỗi nhập gói giọng: ' + e.message, 'error'); return { ok: false, error: e.message }; }
+});
 ipcMain.handle('avatar', (_e, url) => fetchAvatar(url));
 ipcMain.on('simulate', (_e, ev) => emitLive(ev));
 ipcMain.on('stage:cmd', (_e, cmd) => toStage('stage-cmd', cmd));

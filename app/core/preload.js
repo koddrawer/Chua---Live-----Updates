@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   disconnect: () => ipcRenderer.invoke('tiktok:disconnect'),
   tts: (t, o) => ipcRenderer.invoke('tts', t, o),
   ttsTest: e => ipcRenderer.invoke('tts:test', e),
-  vieneu: { status: () => ipcRenderer.invoke('vieneu:status'), install: () => ipcRenderer.invoke('vieneu:install'), start: () => ipcRenderer.invoke('vieneu:start'), stop: () => ipcRenderer.invoke('vieneu:stop'), test: r => ipcRenderer.invoke('vieneu:test', r), clone: o => ipcRenderer.invoke('vieneu:clone', o), prerender: () => ipcRenderer.invoke('vieneu:prerender') },
+  vieneu: { status: () => ipcRenderer.invoke('vieneu:status'), install: () => ipcRenderer.invoke('vieneu:install'), start: () => ipcRenderer.invoke('vieneu:start'), stop: () => ipcRenderer.invoke('vieneu:stop'), test: r => ipcRenderer.invoke('vieneu:test', r), clone: o => ipcRenderer.invoke('vieneu:clone', o), prerender: () => ipcRenderer.invoke('vieneu:prerender'), exportPack: () => ipcRenderer.invoke('vieneu:exportPack'), importPack: () => ipcRenderer.invoke('vieneu:importPack') },
   ttsClear: () => ipcRenderer.invoke('tts:clear'),
   ttsCount: () => ipcRenderer.invoke('tts:count'),
   avatar: u => ipcRenderer.invoke('avatar', u),

@@ -873,7 +873,7 @@ function onJoin(u, src) {
   if (joinQueue.find(q => q.id === u.id)) return;
   joinQueue.push(u);
   if (joinQueue.length > 300) { stats.dropped += joinQueue.length - 300; joinQueue.splice(0, joinQueue.length - 300); }
-  if (src === 'join') { AudioMgr.sfx('chime'); if (cfg.voice.greetEnabled) AudioMgr.say(fill(cfg.voice.greetTemplate, { name: voiceName(u.nickname) }), { low: true }); }
+  if (src === 'join') { AudioMgr.sfx('chime'); if (cfg.voice.greetEnabled) AudioMgr.say(fill(cfg.voice.greetTemplate, { name: voiceName(u.nickname) }), { low: true, personal: [voiceName(u.nickname)] }); }
 }
 function onHearts(u, n) {
   if (!u || !u.id) return;
@@ -901,7 +901,7 @@ function onGift(ev) {
   const d = { user: u, c, coins, gift: ev.giftName, repeat: ev.repeat || 1, tier, at: now, wall: ev.wall || Date.now(), fortune: ev.fortune || pickFortune() };
   // tải trước giọng đọc + avatar ngay khi nhận quà để lúc tới lượt là đọc được liền
   d.avP = u.avatar ? window.api.avatar(u.avatars && u.avatars.length ? u.avatars : u.avatar).catch(() => null) : Promise.resolve(null);
-  d.fullText = donorVoice(d, false); d.shortText = d.fullText; AudioMgr.prefetchThanks(d.fullText);
+  d.fullText = donorVoice(d, false); d.shortText = d.fullText; AudioMgr.prefetchThanks(d.fullText, personalOf(d));
   donorQueue.push(d); saveDonors();
   pumpDonors();
 }
@@ -925,13 +925,39 @@ function giftLabel(d) {
   if (d.gifts) { const e = Object.entries(d.gifts).map(([n, k]) => (k > 1 ? k + ' ' : '') + n); return e.length > 1 ? e.slice(0, -1).join(', ') + (EN() ? ' and ' : ' và ') + e[e.length - 1] : e[0]; }
   return (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || GIFT0());
 }
+function personalOf(d) { return [voiceName(d.user && d.user.nickname), giftLabel(d), String(d.coins)]; }
+// tạo sẵn giọng VieNeu cho mọi câu cố định: bài giảng, câu quẻ/Lời Chúa, lời chúc chung, câu trả lời bình luận
+let prerendering = false;
+async function prerenderAll() {
+  if (prerendering) return; prerendering = true;
+  const log = (m, l) => window.api.log(m, l);
+  try {
+    if (cfg.voice.engine !== 'vieneu') log('Lưu ý: bộ đọc đang không phải VieNeu — vẫn tạo sẵn theo bộ đọc hiện tại', 'warn');
+    const jobs = [], seen = new Set();
+    const add = (t, role) => { t = String(t || '').trim(); if (!t) return; const k = role + '|' + t; if (!seen.has(k)) { seen.add(k); jobs.push([t, role]); } };
+    for (const s of content.sermons || []) for (const l of s.lines || []) add(l, 'sermon');
+    const NAME = 'Zqxname', GIFT = 'Zqxgift', COINS = 987654, CMT = 'Zqxcomment', per = [NAME, GIFT, String(COINS), CMT];
+    const fixed = txt => AudioMgr.segments(txt, per).filter(x => !x.per).forEach(x => add(x.t, 'thanks'));
+    const tiers = (cfg.tiers || []).length ? cfg.tiers : [{ label: '', fortuneLevel: '' }];
+    for (const f of content.fortunes || []) for (const t of tiers) fixed(donorVoice({ user: { nickname: NAME }, gift: GIFT, repeat: 1, coins: COINS, tier: t, fortune: f }, false));
+    for (const line of String((cfg.chatVoice && cfg.chatVoice.replies) || '').split('\n')) { const i = line.indexOf('=>'); if (i > 0) fixed(fill(line.slice(i + 2).trim(), { name: NAME, comment: CMT })); }
+    if (cfg.voice.greetTemplate) fixed(fill(cfg.voice.greetTemplate, { name: NAME }));
+    log('Đang tạo sẵn giọng cho ' + jobs.length + ' câu (bài giảng, quẻ, lời chúc, trả lời bình luận)...');
+    let ok = 0, fail = 0;
+    for (let i = 0; i < jobs.length; i++) {
+      try { await AudioMgr.cacheText(jobs[i][0], jobs[i][1]); ok++; } catch (e) { fail++; if (fail > 5 && ok === 0) { log('Dừng tạo giọng: ' + e.message, 'error'); break; } }
+      if (i % 10 === 9) log('Đã tạo ' + (i + 1) + '/' + jobs.length + ' câu');
+    }
+    log('Xong: ' + ok + '/' + jobs.length + ' câu đã có sẵn giọng' + (fail ? ', lỗi ' + fail : '') + '. Bấm "Xuất gói giọng" để mang sang máy khác.', ok ? 'ok' : 'warn');
+  } finally { prerendering = false; }
+}
 function donorVars(d) {
   const gift = giftLabel(d);
   const v = cardVars({ user: d.user, tier: d.tier, fortune: d.fortune, gift, coins: d.coins });
   v.name = voiceName(d.user.nickname); v.verse = (d.fortune.verse || []).join('. ');
   return v;
 }
-const cleanVoice = t => t.replace(/\s+([.,])/g, '$1').replace(/\.{2,}/g, '.').replace(/\s+/g, ' ').trim();
+const cleanVoice = t => t.replace(/,\s*\./g, '.').replace(/\s+([.,])/g, '$1').replace(/\.{2,}/g, '.').replace(/\s+/g, ' ').trim();
 function donorVoice(d, short) {
   const D = cfg.donate || {};
   const tpl = short ? (D.shortTemplate || (EN() ? 'Thank you {name}. Your fortune: {fortuneName}, {level}. {verse}.' : 'Cảm ơn {name}. Quẻ {fortuneName}, {level}. {verse}.')) : cfg.voice.thanksTemplate;
@@ -997,7 +1023,7 @@ async function pumpDonorsClassic() {
     }
     const busy = donorQueue.length > 0;
     const text = group.length > 1 ? groupVoice(group) : (busy || maxWait > 0 && !first.fullText ? first.shortText : (first.fullText || donorVoice(first, false)));
-    let voiceDone = false; const voiceP = AudioMgr.say(text, { cuttable: true }).then(() => { voiceDone = true; });
+    let voiceDone = false; const voiceP = AudioMgr.say(text, { cuttable: true, personal: group.flatMap(personalOf) }).then(() => { voiceDone = true; });
     const secs = Math.max(...group.map(d => d.tier.cardSeconds > 0 ? d.tier.cardSeconds : cfg.scene.cardSeconds));
     const tStart = now; let cut = false;
     // chờ đọc xong + đủ thời gian hiện thẻ; nếu có người mới chờ sắp quá hạn thì nhường lượt
@@ -1137,7 +1163,7 @@ async function runDonorStage() {
         };
         const text = donorVoice(d, false); // luôn đọc lời chúc đầy đủ theo mẫu
         let voiceDone = false, started = false, t0 = now;
-        AudioMgr.say(text, { cuttable: true, onStart: () => { started = true; t0 = now; startRead(); } }).then(() => { voiceDone = true; if (!started) { started = true; startRead(); } });
+        AudioMgr.say(text, { cuttable: true, personal: personalOf(d), onStart: () => { started = true; t0 = now; startRead(); } }).then(() => { voiceDone = true; if (!started) { started = true; startRead(); } });
         await new Promise(res => {
           const iv = setInterval(() => {
             const el = started ? now - t0 : 0;
@@ -1479,6 +1505,7 @@ async function main() {
     else if (cmd.type === 'sermon-start') AudioMgr.startSermon();
     else if (cmd.type === 'music-next') AudioMgr.nextMusic();
     else if (cmd.type === 'say') AudioMgr.say(cmd.text);
+    else if (cmd.type === 'prerender') prerenderAll();
     else if (cmd.type === 'gallery-clear') { gallery.slice().forEach(g => removeGalleryItem(g, false)); }
     else if (cmd.type === 'bg-next') switchBg(cmd.id);
     else if (cmd.type === 'card-preview') { previewHold = !!cmd.hold; previewTier = cmd.tier || 0; if (previewHold) showPreview(); else hideCard(); }
