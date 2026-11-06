@@ -62,6 +62,7 @@ function computeStepK() {
 // ---------------- Tải nhân vật ----------------
 function loadImg(src) { return new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }); }
 // ---------- 8-bit: thu nhỏ, giảm màu, viền đen 1 pixel ----------
+const pixUI = () => isPixel() && cfg.style && cfg.style.pixelUI === true; // chữ kiểu 8-bit (tuỳ chọn)
 function pixelateCanvas(img, tw, th, opts = {}) {
   const pad = opts.outline === false ? 0 : 1;
   tw = Math.max(1, Math.round(tw)); th = Math.max(1, Math.round(th));
@@ -452,7 +453,7 @@ function drawName(c) {
   const col = c.kind === 'donor' || c.auraOn ? '#ffe28a' : '#fff6e0';
   const liftSmall = c.liftSlot && (c.liftSlot.n > 1 || c.liftSlot.slot != null);
   const liftFs = c.lift ? (liftSmall ? 22 : 32) : 16;
-  if (isPixel()) pixelText(txt, x, y, liftFs, col, '#2a1030');
+  if (pixUI()) pixelText(txt, x, y, liftFs, col, '#2a1030');
   else {
     const fs2 = c.lift ? (liftSmall ? 21 : 30) : fs;
     ctx.font = `700 ${fs2}px 'Noto Serif', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
@@ -465,7 +466,7 @@ function drawName(c) {
     const twA = ctx.measureText(txt).width;
     // khi bay lên: avatar nhỏ nằm ngay trên tên (giữa); bình thường: bên trái tên
     const ax = big ? x : x - twA / 2 - sz / 2 - 8 - (isHeartChar(c) && c.hearts > 0 ? 34 : 0);
-    const ay = big ? y - (isPixel() ? liftFs : (liftSmall ? 21 : 30)) - sz / 2 - 4 : y - sz / 2 - (isPixel() ? 2 : fs * 0.15);
+    const ay = big ? y - (pixUI() ? liftFs : (liftSmall ? 21 : 30)) - sz / 2 - 4 : y - sz / 2 - (pixUI() ? 2 : fs * 0.15);
     ctx.save(); ctx.beginPath(); ctx.arc(ax, ay, sz / 2, 0, Math.PI * 2); ctx.closePath();
     ctx.fillStyle = '#f3c55f'; ctx.fill(); ctx.beginPath(); ctx.arc(ax, ay, sz / 2 - 2, 0, Math.PI * 2); ctx.clip();
     ctx.imageSmoothingEnabled = true; ctx.drawImage(c.avatarImg, ax - sz / 2, ay - sz / 2, sz, sz); ctx.restore();
@@ -473,19 +474,19 @@ function drawName(c) {
   // tim bay lên cạnh tên: mỗi lượt thả tim = 1 icon
   if (c.heartPops && c.heartPops.length) {
     const tw = ctx.measureText(txt).width;
-    const hx = x + tw / 2 + 10, hy = y - (isPixel() ? 9 : fs * 0.55);
+    const hx = x + tw / 2 + 10, hy = y - (pixUI() ? 9 : fs * 0.55);
     for (const p of c.heartPops) {
       if (p.t < 0) continue;
       const k = p.t / 1.3; const a = k < 0.15 ? k / 0.15 : Math.max(0, 1 - (k - 0.15) / 0.85);
       ctx.globalAlpha = Math.min(ctx.globalAlpha || 1, 1) * 0 + a * Math.min(1, c.alpha);
-      drawHeart(hx + p.dx + Math.sin(p.t * 6) * 3, hy - k * 34, isPixel() ? 2 : 1.8);
+      drawHeart(hx + p.dx + Math.sin(p.t * 6) * 3, hy - k * 34, pixUI() ? 2 : 1.8);
     }
   }
   if (isHeartChar(c) && c.hearts > 0) { // bộ đếm tim
     ctx.globalAlpha = Math.min(1, c.alpha);
     const tw = ctx.measureText(txt).width; const cx0 = x - tw / 2 - 12;
-    drawHeart(cx0 - 6, y - (isPixel() ? 9 : fs * 0.5), isPixel() ? 1.5 : 1.3);
-    if (isPixel()) pixelText(String(c.hearts), cx0 - 22, y, 16, '#ff9ab8', '#2a1030');
+    drawHeart(cx0 - 6, y - (pixUI() ? 9 : fs * 0.5), pixUI() ? 1.5 : 1.3);
+    if (pixUI()) pixelText(String(c.hearts), cx0 - 22, y, 16, '#ff9ab8', '#2a1030');
     else { ctx.font = `700 ${Math.round(fs * 0.85)}px 'Noto Serif', serif`; ctx.textAlign = 'right'; ctx.lineWidth = fs * 0.25; ctx.strokeStyle = 'rgba(40,0,10,.9)'; ctx.strokeText(String(c.hearts), cx0 - 14, y); ctx.fillStyle = '#ff9ab8'; ctx.fillText(String(c.hearts), cx0 - 14, y); ctx.textAlign = 'center'; }
   }
   ctx.globalAlpha = 1;
@@ -511,9 +512,9 @@ function drawFloats(dt) {
     f.t += dt; const k = f.t / f.dur;
     const a = k < 0.15 ? k / 0.15 : k > 0.75 ? Math.max(0, (1 - k) / 0.25) : 1;
     const y = f.y - k * 70;
-    ctx.globalAlpha = a; ctx.font = isPixel() ? `16px 'PixelVN'` : `700 25px 'Dancing Script', 'Noto Serif', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.globalAlpha = a; ctx.font = pixUI() ? `16px 'PixelVN'` : `700 21px 'Noto Serif', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     const tw = ctx.measureText(f.text).width / 2 + 10;
-    if (isPixel()) { const xx = Math.max(tw, Math.min(W - tw, f.x)); pixelText(f.text, xx, y, 16, '#ffe48a', '#3a1400'); continue; }
+    if (pixUI()) { const xx = Math.max(tw, Math.min(W - tw, f.x)); pixelText(f.text, xx, y, 16, '#ffe48a', '#3a1400'); continue; }
     const x = Math.max(tw, Math.min(W - tw, f.x));
     ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(70,30,0,.85)'; ctx.strokeText(f.text, x, y);
     const g = ctx.createLinearGradient(0, y - 26, 0, y); g.addColorStop(0, '#fff6cf'); g.addColorStop(1, '#ffc65a');
@@ -1387,7 +1388,7 @@ function applyLayout() {
   const tb = document.getElementById('titleBar');
   const ttxt = String(L.title.text ?? '').replace(/\r/g, '');
   tb.textContent = ttxt;
-  let tsz = Math.max(10, Math.min(96, +L.title.size || 30)); if (isPixel()) tsz = Math.max(16, Math.round(tsz / 8) * 8); // font pixel nét hơn ở bội số 8
+  let tsz = Math.max(10, Math.min(96, +L.title.size || 30)); if (pixUI()) tsz = Math.max(16, Math.round(tsz / 8) * 8); // font pixel nét hơn ở bội số 8
   tb.style.fontSize = tsz + 'px';
   if (L.title.bottom != null && isFinite(+L.title.bottom)) { tb.style.top = 'auto'; tb.style.bottom = Math.max(0, Math.min(1100, +L.title.bottom)) + 'px'; } else { tb.style.bottom = 'auto'; tb.style.top = Math.max(0, Math.min(1240, +L.title.y || 1232)) + 'px'; }
   tb.style.display = L.title.show !== false && ttxt.trim() ? '' : 'none';
@@ -1430,6 +1431,7 @@ function setupEdit() {
 let lastSwitchSec = null;
 async function applyAll(first) {
   document.body.classList.toggle('pixel', isPixel());
+  document.body.classList.toggle('pixelui', pixUI());
   try { window.LiveExtra && LiveExtra.apply(); } catch (e) { console.error(e); }
   const ss = cfg.backgrounds && cfg.backgrounds.switchSeconds; if (!first && ss !== lastSwitchSec && !bgTrans) scheduleBgSwitch(); lastSwitchSec = ss;
   computeStepK();

@@ -1,4 +1,4 @@
 {
-  "version": "1.0.37",
-  "notes": "Sửa lỗi 2 nhân vật đè lên nhau ở cùng một thẻ quẻ khi một người donate nhiều lần"
+  "version": "1.0.38",
+  "notes": "Chữ lời giảng, tên người, dòng chữ dưới, câu quẻ đổi sang font dễ đọc (không dùng font 8-bit); hình vẫn 8-bit"
 }

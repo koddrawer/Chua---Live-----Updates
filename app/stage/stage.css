@@ -30,7 +30,7 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; user-s
 .wrow .wn b { color: var(--gold); }
 @keyframes wIn { from { transform: translateX(30px); opacity: 0; } to { transform: none; opacity: 1; } }
 
-#titleBar { position: absolute; left: 12px; right: 12px; text-align: center; white-space: pre-line; line-height: 1.25; font-family: 'Dancing Script', 'Noto Serif', serif; font-weight: 700; font-size: 30px; color: #ffe4a3;
+#titleBar { position: absolute; left: 12px; right: 12px; text-align: center; white-space: pre-line; line-height: 1.25; font-family: 'Noto Serif', serif; font-weight: 700; font-size: 30px; color: #ffe4a3;
   text-shadow: 0 0 14px rgba(255,170,60,.95), 0 2px 3px #000; }
 
 #cardLayer { position: absolute; inset: 0; }
@@ -59,14 +59,14 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; user-s
 .dc-fortune::before { content: ''; position: absolute; inset: 5px; border: 1px dashed rgba(255,215,130,.6); border-radius: 11px; pointer-events: none; }
 .ft-title { font-size: 22px; color: #ffe08a; font-weight: 700; letter-spacing: 1px; }
 .ft-level { display: inline-block; margin-left: 8px; padding: 1px 10px; border-radius: 10px; background: #f3c55f; color: #6a0d05; font-size: 18px; }
-.ft-verse { font-family: 'Dancing Script', 'Noto Serif', serif; font-size: 31px; line-height: 1.25; color: #fff4d0; margin: 8px 0 6px; text-shadow: 0 1px 3px #300; }
+.ft-verse { font-family: 'Noto Serif', serif; font-size: 25px; line-height: 1.25; color: #fff4d0; margin: 8px 0 6px; text-shadow: 0 1px 3px #300; }
 .ft-meaning { font-size: 18px; color: #ffd98c; font-style: italic; }
 
 body.edit .board { pointer-events: auto; cursor: move; outline: 2px dashed #49f; resize: both; }
 #editHint { display: none; position: absolute; left: 10px; right: 10px; top: 600px; padding: 10px; background: rgba(0,60,160,.85); border-radius: 10px; font: 600 18px sans-serif; text-align: center; }
 body.edit #editHint { display: block; }
 
-.dc-head { font-family: 'Dancing Script', 'Noto Serif', serif; font-weight: 700; font-size: 34px; color: #fff0c2; text-shadow: 0 0 14px rgba(255,170,60,.95), 0 2px 3px #000; margin-bottom: 6px; text-align: center; }
+.dc-head { font-family: 'Noto Serif', serif; font-weight: 700; font-size: 34px; color: #fff0c2; text-shadow: 0 0 14px rgba(255,170,60,.95), 0 2px 3px #000; margin-bottom: 6px; text-align: center; }
 body.edit #cardLayer .dc-frame, body.edit #cardLayer .dfortune { pointer-events: auto; cursor: move; outline: 2px dashed #49f; }
 
 /* avatar donate treo hai bên Đức Phật */
@@ -100,30 +100,30 @@ body.edit #cardLayer .dc-frame, body.edit #cardLayer .dfortune { pointer-events:
 body.edit #chat, body.edit #camwrap { pointer-events: auto; cursor: move; outline: 2px dashed #49f; }
 
 /* ================= GIAO DIỆN 8-BIT ================= */
-body.pixel #ui, body.pixel #ui *:not(#cardLayer, #cardLayer *, #slotLayer, #slotLayer *, #gallery, #gallery *) { font-family: 'PixelVN', monospace !important; font-style: normal !important; font-weight: 400 !important; letter-spacing: 0 !important; }
+body.pixelui #ui, body.pixelui #ui *:not(#cardLayer, #cardLayer *, #slotLayer, #slotLayer *, #gallery, #gallery *) { font-family: 'PixelVN', monospace !important; font-style: normal !important; font-weight: 400 !important; letter-spacing: 0 !important; }
 /* font pixel nét nhất ở cỡ 16 / 32 px */
-body.pixel .board { font-size: 16px !important; }
-body.pixel #liveinfo { font-size: 16px !important; }
+body.pixelui .board { font-size: 16px !important; }
+body.pixelui #liveinfo { font-size: 16px !important; }
 body.pixel img:not(#cardLayer img):not(#slotLayer img):not(#gallery img) { image-rendering: pixelated; }
 /* avatar người xem / người donate luôn giữ ảnh thật */
 body.pixel img.av, body.pixel .wrow img { image-rendering: auto; }
-body.pixel .board { border-radius: 0; border: 4px solid #f6c64e; padding: 10px 12px;
+body.pixelui .board { border-radius: 0; border: 4px solid #f6c64e; padding: 10px 12px;
   background: rgba(24,12,52,var(--op));
   box-shadow: 0 0 0 4px rgba(58,20,0,calc(var(--op) + .2)), 6px 6px 0 4px rgba(0,0,0,calc(var(--op) * .8)), inset 0 0 0 3px rgba(255,236,160,calc(var(--op) * .35)); backdrop-filter: none !important; }
-body.pixel .board::before { border-radius: 0; inset: 3px; border: 2px dashed rgba(255,214,110,calc(var(--op) * .5)); }
-body.pixel .board-title { font-size: 1.05em; color: #ffe066; text-shadow: 2px 2px 0 #3a1400, -2px 0 0 #3a1400, 0 -2px 0 #3a1400, 2px 0 0 #3a1400; border-bottom: 3px solid rgba(255,214,110,.6); letter-spacing: 0; }
-body.pixel .sline { line-height: 1.35; text-shadow: 2px 2px 0 #000; color: rgba(225,215,255,.6); }
-body.pixel .sline.read { color: rgba(200,190,230,.35); }
-body.pixel .sline.cur { color: #fff27a; text-shadow: 2px 2px 0 #5a2000, 0 0 0 #000; font-weight: 400; }
-body.pixel .wrow { border-radius: 0; background: rgba(255,214,110,.12); border-left: 4px solid #f6c64e; }
-body.pixel .wrow .ph { border-radius: 0; border: 2px solid #f6c64e; }
-body.pixel .wrow img { border: 2px solid #f6c64e; }
-body.pixel .wrow .wn { text-shadow: 2px 2px 0 #000; }
-body.pixel .crow { text-shadow: 2px 2px 0 #000; }
-body.pixel #titleBar { color: #ffe066; text-shadow: 3px 3px 0 #5a1e00, -2px 0 0 #3a1400, 2px 0 0 #3a1400, 0 -2px 0 #3a1400; }
-body.pixel #liveinfo { border-radius: 0; border: 3px solid #f6c64e; background: rgba(24,12,52,.75); box-shadow: 4px 4px 0 rgba(0,0,0,.6); text-shadow: 2px 2px 0 #000; }
-body.pixel #liveinfo .lv-dot { border-radius: 0; box-shadow: none; }
-body.pixel #camwrap { border-radius: 0; border: 4px solid #f6c64e; box-shadow: 0 0 0 4px #3a1400, 6px 6px 0 4px rgba(0,0,0,.5); }
+body.pixelui .board::before { border-radius: 0; inset: 3px; border: 2px dashed rgba(255,214,110,calc(var(--op) * .5)); }
+body.pixelui .board-title { font-size: 1.05em; color: #ffe066; text-shadow: 2px 2px 0 #3a1400, -2px 0 0 #3a1400, 0 -2px 0 #3a1400, 2px 0 0 #3a1400; border-bottom: 3px solid rgba(255,214,110,.6); letter-spacing: 0; }
+body.pixelui .sline { line-height: 1.35; text-shadow: 2px 2px 0 #000; color: rgba(225,215,255,.6); }
+body.pixelui .sline.read { color: rgba(200,190,230,.35); }
+body.pixelui .sline.cur { color: #fff27a; text-shadow: 2px 2px 0 #5a2000, 0 0 0 #000; font-weight: 400; }
+body.pixelui .wrow { border-radius: 0; background: rgba(255,214,110,.12); border-left: 4px solid #f6c64e; }
+body.pixelui .wrow .ph { border-radius: 0; border: 2px solid #f6c64e; }
+body.pixelui .wrow img { border: 2px solid #f6c64e; }
+body.pixelui .wrow .wn { text-shadow: 2px 2px 0 #000; }
+body.pixelui .crow { text-shadow: 2px 2px 0 #000; }
+body.pixelui #titleBar { color: #ffe066; text-shadow: 3px 3px 0 #5a1e00, -2px 0 0 #3a1400, 2px 0 0 #3a1400, 0 -2px 0 #3a1400; }
+body.pixelui #liveinfo { border-radius: 0; border: 3px solid #f6c64e; background: rgba(24,12,52,.75); box-shadow: 4px 4px 0 rgba(0,0,0,.6); text-shadow: 2px 2px 0 #000; }
+body.pixelui #liveinfo .lv-dot { border-radius: 0; box-shadow: none; }
+body.pixelui #camwrap { border-radius: 0; border: 4px solid #f6c64e; box-shadow: 0 0 0 4px #3a1400, 6px 6px 0 4px rgba(0,0,0,.5); }
 body.pixel #camwrap video { image-rendering: pixelated; }
 /* thẻ donate & avatar treo giữ kiểu thường */
 body.pixel #cardLayer, body.pixel #slotLayer, body.pixel #gallery { font-family: 'Noto Serif', serif; }
@@ -149,7 +149,7 @@ body.pixel #cardLayer, body.pixel #slotLayer, body.pixel #gallery { font-family:
 .qbody { position: absolute; left: 16%; right: 16%; top: 14.5%; bottom: 20.5%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: .2em; text-align: center; gap: .3em; overflow: hidden; color: #fff4d0; text-shadow: 0 1px 2px #300; }
 .q-title { font-weight: 700; color: #ffe08a; font-size: 1.12em; line-height: 1.15; }
 .q-level { display: inline-block; padding: .05em .7em; border-radius: 1em; background: #f3c55f; color: #6a0d05; font-size: .82em; font-weight: 700; text-shadow: none; }
-.q-verse { font-family: 'Dancing Script', 'Noto Serif', serif; font-size: 1.22em; line-height: 1.2; }
+.q-verse { font-family: 'Noto Serif', serif; font-size: 1.05em; line-height: 1.2; }
 .q-meaning { font-size: .78em; font-style: italic; color: #ffd98c; line-height: 1.25; }
 .q-gift { font-size: .66em; color: #ffe9c0; opacity: .9; }
 /* lúc đang hiện thẻ quẻ: làm mờ các bảng chữ + avatar treo để không che nhân vật */

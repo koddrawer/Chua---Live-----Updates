@@ -273,7 +273,8 @@
   "style": {
     "pixel": true,
     "charPixels": 64,
-    "fxRes": 240
+    "fxRes": 240,
+    "pixelUI": false
   },
   "vieneu": {
     "python": "",
