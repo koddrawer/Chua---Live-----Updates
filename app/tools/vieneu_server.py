@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Máy chủ giọng đọc VieNeu-TTS cho Chùa Live (chạy trên máy của bạn, không cần Internet sau khi tải model).
+"""Máy chủ giọng đọc VieNeu-TTS cho app LIVE (chạy trên máy của bạn, không cần Internet sau khi tải model).
 Cài:  python -m pip install vieneu
 Chạy: python vieneu_server.py 8765
 API:  GET  /health            -> {"ok":true,"voices":[...]}
@@ -16,14 +16,77 @@ ERR = None
 VOICES = []
 
 
+def hf_cache_dirs():
+    out = []
+    for env in ("HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE"):
+        if os.environ.get(env):
+            out.append(os.environ[env])
+    home = os.environ.get("HF_HOME") or os.path.join(os.path.expanduser("~"), ".cache", "huggingface")
+    out.append(os.path.join(home, "hub"))
+    return [d for d in dict.fromkeys(out) if os.path.isdir(d)]
+
+
+def unlink_snapshots():
+    """onnxruntime mới chặn file .data nằm ngoài thư mục model. Kho Hugging Face trên Windows dùng
+    liên kết (symlink) trỏ vào thư mục blobs nên model và file .data bị tách ra 2 nơi -> lỗi
+    'External data path escapes model directory'. Thay các liên kết bằng bản sao thật nằm cùng thư mục."""
+    import shutil
+    n = 0
+    for hub in hf_cache_dirs():
+        for name in os.listdir(hub):
+            if not name.startswith("models--"):
+                continue
+            snap = os.path.join(hub, name, "snapshots")
+            for root, _dirs, files in os.walk(snap):
+                for f in files:
+                    if not f.lower().endswith((".onnx", ".data", ".onnx_data", ".bin")):
+                        continue
+                    fp = os.path.join(root, f)
+                    real = os.path.realpath(fp)
+                    if os.path.islink(fp) or os.path.normcase(real) != os.path.normcase(os.path.abspath(fp)):
+                        try:
+                            tmp = fp + ".copy"
+                            shutil.copyfile(real, tmp)
+                            os.remove(fp)
+                            os.replace(tmp, fp)
+                            n += 1
+                        except Exception as e:
+                            print("Không sao chép được %s: %s" % (fp, e), flush=True)
+    print("Đã thay %d liên kết trong kho model bằng bản sao thật" % n, flush=True)
+    return n
+
+
+def make_engine():
+    from vieneu import Vieneu
+    try:
+        return Vieneu(backend="onnx")  # chạy CPU, không cần card đồ hoạ
+    except Exception as e:
+        if "External data" in str(e) or "escapes model directory" in str(e):
+            raise
+        return Vieneu()
+
+
 def load():
     global ENGINE, ERR, VOICES
+    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
     try:
-        from vieneu import Vieneu
         try:
-            ENGINE = Vieneu(backend="onnx")  # chạy CPU, không cần card đồ hoạ
-        except Exception:
-            ENGINE = Vieneu()
+            ENGINE = make_engine()
+        except Exception as e:
+            if "External data" not in str(e) and "escapes model directory" not in str(e):
+                raise
+            print("Gặp lỗi đường dẫn model của onnxruntime — đang sửa kho model...", flush=True)
+            unlink_snapshots()
+            try:
+                ENGINE = make_engine()
+            except Exception as e2:
+                if "External data" not in str(e2) and "escapes model directory" not in str(e2):
+                    raise
+                print("Vẫn lỗi — cài onnxruntime bản 1.22 (tương thích) rồi thử lại...", flush=True)
+                import subprocess
+                subprocess.call([sys.executable, "-m", "pip", "install", "onnxruntime==1.22.1"])
+                print("Đã cài xong onnxruntime 1.22 — hãy bấm Dừng rồi Khởi động lại VieNeu.", flush=True)
+                raise
         try:
             VOICES = [{"label": str(l), "id": str(i)} for l, i in ENGINE.list_preset_voices()]
         except Exception:

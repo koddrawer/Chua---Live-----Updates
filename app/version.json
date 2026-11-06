@@ -1,4 +1,4 @@
 {
-  "version": "1.0.39",
-  "notes": "Thêm giao diện tiếng Anh (đổi cả bài giảng, quẻ, lời chúc, giọng đọc)"
+  "version": "1.0.40",
+  "notes": "Sửa lỗi VieNeu 'External data path escapes model directory' (tự sửa kho model, cài onnxruntime tương thích nếu cần)"
 }
