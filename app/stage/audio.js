@@ -177,7 +177,7 @@
       for (let i = queue.length - 1; i >= 0; i--) if (queue[i].opts.low) queue.splice(i, 1)[0].res();
       if (curThanks && curThanks.low) { const c = curThanks; c.cancelled = true; c.cancel && c.cancel(); }
     }
-    return new Promise(res => { queue.push({ text, opts, res }); pump(); });
+    return new Promise(res => { const it = { text, opts, res }; queue.push(it); if (vnMode()) prepItem(it); pump(); });
   };
   // VieNeu: tách lời đọc thành các đoạn; đoạn không chứa tên/quà (câu quẻ, lời chúc chung...) dùng được giọng tạo sẵn
   const vnMode = () => cfg && cfg.voice.engine === 'vieneu' && cfg.lang !== 'en';
@@ -191,19 +191,26 @@
   const thanksArgs = () => [cfg.voice.thanksVoice || cfg.voice.voice, cfg.voice.thanksRate || 0, 0];
   A.prefetchThanks = (t, personal) => { if (!cfg) return Promise.resolve(); const segs = vnMode() && personal ? A.segments(t, personal).map(x => x.t) : [t]; return Promise.all(segs.map(x => getVoiceURL(x, ...thanksArgs()).catch(() => {}))); };
   A.cacheText = (text, role) => role === 'sermon' ? getVoiceURL(text, cfg.voice.voice, cfg.voice.rate, cfg.voice.pitch) : getVoiceURL(text, ...thanksArgs());
+  const segsOf = it => vnMode() && it.opts.personal ? A.segments(it.text, it.opts.personal).map(x => x.t) : [it.text];
+  function prepItem(it) {
+    if (!it || cfg.voice.engine === 'off' || cfg.voice.engine === 'system') return Promise.resolve();
+    if (!it.prep) it.prep = Promise.race([Promise.all(segsOf(it).map(x => getVoiceURL(x, ...thanksArgs()).catch(() => null))), new Promise(r => setTimeout(r, 40000))]);
+    return it.prep;
+  }
   async function pump() {
     if (thanksBusy || !queue.length) return;
     clearTimeout(resumeTimer);
     thanksBusy = true;
-    await pauseSermon();
+    await Promise.all([pauseSermon(), prepItem(queue[0])]); // chờ câu giảng xong + tạo xong giọng cùng lúc
     while (queue.length) {
       const it = queue.shift();
       if (cfg.voice.engine === 'off') { it.res(); continue; }
       const ctl = { low: !!it.opts.low }; curThanks = ctl;
       try { it.opts.onStart && it.opts.onStart(); } catch {}
-      const segs = vnMode() && it.opts.personal ? A.segments(it.text, it.opts.personal).map(x => x.t) : [it.text];
+      const segs = segsOf(it);
+      await prepItem(it); // có đủ giọng mọi đoạn rồi mới đọc -> đọc liền mạch, không ngắt quãng giữa "A Di Đà Phật" và tên
+      if (ctl.cancelled) { it.res(); continue; }
       for (let i = 0; i < segs.length; i++) {
-        if (i + 1 < segs.length) getVoiceURL(segs[i + 1], ...thanksArgs()).catch(() => {}); // tải trước đoạn sau
         const r = await speakWith(thanksEl, segs[i], ...thanksArgs(), cfg.voice.thanksVolume, ctl);
         if (r === 'cancel' || ctl.cancelled) break;
       }

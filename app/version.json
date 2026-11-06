@@ -1,4 +1,4 @@
 {
-  "version": "1.0.41",
-  "notes": "Tạo sẵn giọng VieNeu cho bài giảng, quẻ, lời chúc, trả lời bình luận; xuất/nhập gói giọng để dùng ở máy khác"
+  "version": "1.0.42",
+  "notes": "Sửa: lời chào/lời chúc đọc liền mạch, không còn ngắt giữa 'A Di Đà Phật' và tên người"
 }
