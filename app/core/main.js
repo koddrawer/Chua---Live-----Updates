@@ -45,14 +45,44 @@ if (!config._migThanks33) { config.voice.thanksTemplate = DEFAULTS.voice.thanksT
 // nâng cấp cấu hình cũ
 const OLD_THANKS = 'A Di Đà Phật. Xin cảm ơn {name} đã gửi tặng {gift}. {name} rút được quẻ {level}: {fortune}. Nguyện cầu Tam Bảo gia hộ cho {name} thân tâm an lạc, vạn sự cát tường.';
 if (config.update && (!config.update.repo || config.update.repo === 'koddrawer/chua-live-updates')) config.update.repo = DEFAULTS.update.repo;
+// ---------- Ngôn ngữ (vi / en): đổi cả nội dung, mẫu lời đọc, giọng đọc ----------
+const LANG_KEYS = ['voice.thanksTemplate', 'voice.greetTemplate', 'voice.voice', 'voice.thanksVoice', 'voice.engine', 'chatVoice.readTemplate', 'chatVoice.replies', 'layout.title.text', 'layout.card.giftText', 'layout.card.tierText', 'layout.card.headText', 'layout.fortune.titleText', 'content'];
+const getK = (o, k) => k.split('.').reduce((a, p) => a == null ? a : a[p], o);
+const setK = (o, k, v) => { const ps = k.split('.'); let x = o; for (let i = 0; i < ps.length - 1; i++) { if (!isObj(x[ps[i]])) x[ps[i]] = {}; x = x[ps[i]]; } x[ps[ps.length - 1]] = v; };
+const clone = v => v === undefined ? v : JSON.parse(JSON.stringify(v));
+function langDefaults(lang) {
+  const o = {}; for (const k of LANG_KEYS) o[k] = clone(getK(DEFAULTS, k));
+  o.tiers = (DEFAULTS.tiers || []).map(t => ({ label: t.label, fortuneLevel: t.fortuneLevel }));
+  if (lang === 'en') {
+    const en = readJSON(path.join(APP, 'data', 'lang_en.json'), {});
+    for (const k of Object.keys(en)) if (k !== 'tiers') o[k] = clone(en[k]);
+    if (Array.isArray(en.tiers)) o.tiers = en.tiers;
+    o['voice.voice'] = 'en-US-GuyNeural'; o['voice.thanksVoice'] = 'en-US-JennyNeural'; o['voice.engine'] = 'edge';
+    o.content = { custom: false, sermons: null, fortunes: null, blessings: null };
+  }
+  return o;
+}
+function switchLang(to) {
+  const from = config.lang || 'vi'; if (from === to) return false;
+  config.langStore = config.langStore || {};
+  const cur = {}; for (const k of LANG_KEYS) cur[k] = clone(getK(config, k));
+  cur.tiers = (config.tiers || []).map(t => ({ label: t.label, fortuneLevel: t.fortuneLevel }));
+  config.langStore[from] = cur;
+  const nx = config.langStore[to] || langDefaults(to);
+  for (const k of LANG_KEYS) if (nx[k] !== undefined) setK(config, k, clone(nx[k]));
+  config.tiers = (config.tiers || []).map((t, i) => ({ ...t, ...((nx.tiers || [])[i] || {}) }));
+  config.lang = to; writeJSON(CONFIG_PATH, config);
+  return true;
+}
 if (config.voice && config.voice.thanksTemplate === OLD_THANKS) config.voice.thanksTemplate = DEFAULTS.voice.thanksTemplate;
 // Nội dung văn bản mặc định (bài giảng, lời quẻ...) nằm trong data/*.json; nếu người dùng chưa sửa thì luôn lấy bản mới nhất từ cập nhật
-function loadContent() {
-  const d = path.join(APP, 'data');
+function loadContent(lang) {
+  const d = path.join(APP, 'data'); const sx = (lang || (typeof config !== 'undefined' && config.lang) || 'vi') === 'en' ? '_en' : '';
+  const rd = n => { const v = readJSON(path.join(d, n + sx + '.json'), null); return v || readJSON(path.join(d, n + '.json'), []); };
   return {
-    sermons: readJSON(path.join(d, 'sermons.json'), []),
-    fortunes: readJSON(path.join(d, 'fortunes.json'), []),
-    blessings: readJSON(path.join(d, 'blessings.json'), []),
+    sermons: rd('sermons'),
+    fortunes: rd('fortunes'),
+    blessings: rd('blessings'),
     names: readJSON(path.join(d, 'test-names.json'), []),
   };
 }
@@ -326,12 +356,12 @@ function splitChunks(text, max = 190) {
 }
 async function ttsGoogle(text, o = {}) {
   text = String(text || '').trim(); if (!text) return null;
-  const key = crypto.createHash('sha1').update(['google', text].join('|')).digest('hex');
+  const key = crypto.createHash('sha1').update(['google', config.lang || 'vi', text].join('|')).digest('hex');
   const file = path.join(DIRS.ttsCache, key + '.mp3');
   if (fs.existsSync(file)) return fs.readFileSync(file);
   const bufs = [];
   for (const chunk of splitChunks(text)) {
-    const url = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&ttsspeed=1&q=' + encodeURIComponent(chunk);
+    const url = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=' + (config.lang === 'en' ? 'en' : 'vi') + '&client=tw-ob&ttsspeed=1&q=' + encodeURIComponent(chunk);
     const r = await net.fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36', Referer: 'https://translate.google.com/' } });
     if (!r.ok) throw new Error('Google TTS HTTP ' + r.status);
     bufs.push(Buffer.from(await r.arrayBuffer()));
@@ -442,7 +472,8 @@ async function ttsVieneu(text, o = {}) {
   fs.writeFileSync(file, buf); return buf;
 }
 async function tts(text, o = {}) {
-  const engine = config.voice.engine || 'edge';
+  let engine = config.voice.engine || 'edge';
+  if (config.lang === 'en' && engine === 'vieneu') engine = 'edge'; // VieNeu chỉ có tiếng Việt
   if (engine === 'off' || engine === 'system') return null;
   if (engine === 'vieneu') {
     try { return await ttsVieneu(text, o); } catch (e) { ttsErr('VieNeu', e); }
@@ -582,7 +613,12 @@ ipcMain.handle('config:set', async (_e, key, value) => {
     const r = await dialog.showMessageBox(panelWin, { type: 'question', buttons: ['Khởi động lại ngay', 'Để sau'], defaultId: 0, title: 'Chùa Live', message: 'Cần khởi động lại app để dùng API key mới. Khởi động lại ngay?' });
     if (r.response === 0) relaunch();
     return config;
-  } setConfigKey(key, value); return config; });
+  }
+  if (key === 'lang') { // đổi ngôn ngữ: đổi mẫu chữ/giọng/nội dung rồi tải lại 2 cửa sổ
+    if (switchLang(value === 'en' ? 'en' : 'vi')) { broadcast('config', config); setTimeout(() => { for (const w of [stageWin, panelWin]) if (w && !w.isDestroyed()) w.reload(); }, 150); }
+    return config;
+  }
+  setConfigKey(key, value); return config; });
 ipcMain.handle('config:reset', (_e, section) => { const v = section && section.split('.').reduce((a, k) => a == null ? a : a[k], DEFAULTS); if (v !== undefined) setConfigKey(section, JSON.parse(JSON.stringify(v))); return config; });
 ipcMain.handle('content:default', () => loadContent());
 ipcMain.handle('tiktok:connect', async (_e, u) => { await tiktokConnect(u, { manual: true }); return tiktokState(); });

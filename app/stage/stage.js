@@ -891,7 +891,7 @@ function onGift(ev) {
   const tier = tierFor(coins); if (!tier || coins < tier.min) return;
   // gộp nếu người này đang chờ trong hàng
   const q = donorQueue.find(d => d.user.id === u.id);
-  if (q) { q.coins += coins; q.gifts = q.gifts || { [q.gift || 'quà']: q.repeat || 1 }; const gn = ev.giftName || 'quà'; q.gifts[gn] = (q.gifts[gn] || 0) + (ev.repeat || 1); q.tier = tierFor(q.coins); q.fullText = donorVoice(q, false); q.shortText = q.fullText; AudioMgr.prefetchThanks(q.fullText); saveDonors(); return; }
+  if (q) { q.coins += coins; q.gifts = q.gifts || { [q.gift || GIFT0()]: q.repeat || 1 }; const gn = ev.giftName || GIFT0(); q.gifts[gn] = (q.gifts[gn] || 0) + (ev.repeat || 1); q.tier = tierFor(q.coins); q.fullText = donorVoice(q, false); q.shortText = q.fullText; AudioMgr.prefetchThanks(q.fullText); saveDonors(); return; }
   let c = byUser.get(u.id);
   if (!c || c.removing) {
     const qi = joinQueue.findIndex(x => x.id === u.id); if (qi >= 0) joinQueue.splice(qi, 1);
@@ -922,8 +922,8 @@ function cardVars(o) {
   return { name: o.user.nickname, tier: o.tier.label || '', gift: o.gift, coins: o.coins, fortuneName: o.fortune.name || '', level: o.tier.fortuneLevel || '', fortune: o.fortune.meaning || '', verse: (o.fortune.verse || []).join(', ') };
 }
 function giftLabel(d) {
-  if (d.gifts) { const e = Object.entries(d.gifts).map(([n, k]) => (k > 1 ? k + ' ' : '') + n); return e.length > 1 ? e.slice(0, -1).join(', ') + ' và ' + e[e.length - 1] : e[0]; }
-  return (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || 'quà');
+  if (d.gifts) { const e = Object.entries(d.gifts).map(([n, k]) => (k > 1 ? k + ' ' : '') + n); return e.length > 1 ? e.slice(0, -1).join(', ') + (EN() ? ' and ' : ' và ') + e[e.length - 1] : e[0]; }
+  return (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || GIFT0());
 }
 function donorVars(d) {
   const gift = giftLabel(d);
@@ -934,12 +934,13 @@ function donorVars(d) {
 const cleanVoice = t => t.replace(/\s+([.,])/g, '$1').replace(/\.{2,}/g, '.').replace(/\s+/g, ' ').trim();
 function donorVoice(d, short) {
   const D = cfg.donate || {};
-  const tpl = short ? (D.shortTemplate || 'Cảm ơn {name}. Quẻ {fortuneName}, {level}. {verse}.') : cfg.voice.thanksTemplate;
+  const tpl = short ? (D.shortTemplate || (EN() ? 'Thank you {name}. Your fortune: {fortuneName}, {level}. {verse}.' : 'Cảm ơn {name}. Quẻ {fortuneName}, {level}. {verse}.')) : cfg.voice.thanksTemplate;
   return cleanVoice(fill(tpl, donorVars(d)));
 }
 function groupVoice(group) {
   const vs = group.map(donorVars);
-  const names = vs.length > 1 ? vs.slice(0, -1).map(v => v.name).join(', ') + ' và ' + vs[vs.length - 1].name : vs[0].name;
+  const names = vs.length > 1 ? vs.slice(0, -1).map(v => v.name).join(', ') + (EN() ? ' and ' : ' và ') + vs[vs.length - 1].name : vs[0].name;
+  if (EN()) return cleanVoice(`Amitabha. Thank you ${names}. ` + vs.map(v => `${v.name} drew the fortune ${v.fortuneName}, ${v.level}`).join('. ') + '.');
   return cleanVoice(`A Di Đà Phật. Cảm ơn ${names}. ` + vs.map(v => `${v.name} được quẻ ${v.fortuneName}, ${v.level}`).join('. ') + '.');
 }
 // gọi lại nhân vật cho người donate nếu đã biến mất / chưa có
@@ -991,8 +992,8 @@ async function pumpDonorsClassic() {
     // thẻ quẻ + giọng đọc ngay lập tức
     const first = group[0];
     if (!previewHold) {
-      if (group.length > 1) showCard({ group: group.map(d => ({ user: d.user, tier: d.tier, fortune: d.fortune, gift: (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || 'quà'), coins: d.coins })), user: first.user, tier: first.tier, fortune: first.fortune, gift: first.gift, coins: first.coins, noFrame: true });
-      else showCard({ user: first.user, tier: first.tier, fortune: first.fortune, gift: (first.repeat > 1 ? first.repeat + ' ' : '') + (first.gift || 'quà'), coins: first.coins, avatar: first.av, noFrame: liftMode });
+      if (group.length > 1) showCard({ group: group.map(d => ({ user: d.user, tier: d.tier, fortune: d.fortune, gift: (d.repeat > 1 ? d.repeat + ' ' : '') + (d.gift || GIFT0()), coins: d.coins })), user: first.user, tier: first.tier, fortune: first.fortune, gift: first.gift, coins: first.coins, noFrame: true });
+      else showCard({ user: first.user, tier: first.tier, fortune: first.fortune, gift: (first.repeat > 1 ? first.repeat + ' ' : '') + (first.gift || GIFT0()), coins: first.coins, avatar: first.av, noFrame: liftMode });
     }
     const busy = donorQueue.length > 0;
     const text = group.length > 1 ? groupVoice(group) : (busy || maxWait > 0 && !first.fullText ? first.shortText : (first.fullText || donorVoice(first, false)));
@@ -1255,7 +1256,9 @@ function pickFortune() { const f = content.fortunes || []; return f.length ? f[M
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function waitUntil(fn) { return new Promise(r => { const i = setInterval(() => { if (fn()) { clearInterval(i); r(); } }, 50); }); }
 function fill(tpl, o) { return String(tpl || '').replace(/\{(\w+)\}/g, (m, k) => o[k] !== undefined ? o[k] : m); }
-function voiceName(n) { const s = String(n || '').replace(/[^\p{L}\p{N}\s.,'-]/gu, ' ').replace(/\s+/g, ' ').trim(); return s || 'quý Phật tử'; }
+const EN = () => cfg && cfg.lang === 'en';
+const GIFT0 = () => EN() ? 'a gift' : 'quà';
+function voiceName(n) { const s = String(n || '').replace(/[^\p{L}\p{N}\s.,'-]/gu, ' ').replace(/\s+/g, ' ').trim(); return s || (EN() ? 'dear friend' : 'quý Phật tử'); }
 
 // ---------------- Thẻ donate ----------------
 let curCard = null;
@@ -1444,7 +1447,7 @@ async function applyAll(first) {
 }
 async function main() {
   const d = await window.api.init();
-  cfg = d.config; content = d.content; content._blessings = content.blessings; content._fortunes = content.fortunes;
+  cfg = d.config; I18N.setLang(cfg.lang || 'vi'); content = d.content; content._blessings = content.blessings; content._fortunes = content.fortunes;
   assetsBase = d.assets.base; charList = d.characters; frameList = d.frames; musicList = d.music;
   resize(); window.addEventListener('resize', resize);
   setupEdit();

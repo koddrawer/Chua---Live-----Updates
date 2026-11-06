@@ -1,4 +1,4 @@
 {
-  "version": "1.0.38",
-  "notes": "Chữ lời giảng, tên người, dòng chữ dưới, câu quẻ đổi sang font dễ đọc (không dùng font 8-bit); hình vẫn 8-bit"
+  "version": "1.0.39",
+  "notes": "Thêm giao diện tiếng Anh (đổi cả bài giảng, quẻ, lời chúc, giọng đọc)"
 }

@@ -5,14 +5,14 @@ const STATES = [
   ['walk_up', 'Đi lên bậc thang (lưng)'], ['walk_down', 'Đi về phía trước (mặt)'],
   ['bow', 'Cúi chào Phật'], ['bow_front', 'Chắp tay vái (mặt)'], ['kneel', 'Quỳ'], ['prostrate', 'Vái lạy (quỳ cúi rạp)'], ['skip', '— bỏ khung này —'],
 ];
-const VOICES = [['vi-VN-HoaiMyNeural', 'Hoài My (nữ, Việt)'], ['vi-VN-NamMinhNeural', 'Nam Minh (nam, Việt)']];
+const VOICES = [['vi-VN-HoaiMyNeural', 'Hoài My (nữ, Việt)'], ['vi-VN-NamMinhNeural', 'Nam Minh (nam, Việt)'], ['en-US-GuyNeural', 'Guy (male, English US)'], ['en-US-ChristopherNeural', 'Christopher (male, English US)'], ['en-US-JennyNeural', 'Jenny (female, English US)'], ['en-US-AriaNeural', 'Aria (female, English US)'], ['en-GB-RyanNeural', 'Ryan (male, English UK)'], ['en-GB-SoniaNeural', 'Sonia (female, English UK)']];
 
 // ---------- tiện ích ----------
 const get = (o, k) => k.split('.').reduce((a, p) => a == null ? a : a[p], o);
 function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function addLog(l) {
   const box = $('#log'); const d = document.createElement('div'); d.className = l.level || '';
-  d.textContent = new Date(l.t || Date.now()).toLocaleTimeString() + '  ' + l.msg; box.appendChild(d);
+  d.textContent = new Date(l.t || Date.now()).toLocaleTimeString() + '  ' + (window.I18N ? I18N.tr(l.msg) : l.msg); box.appendChild(d);
   while (box.children.length > 500) box.firstChild.remove(); box.scrollTop = box.scrollHeight;
 }
 function rnd(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -461,6 +461,9 @@ $('#btnRollback').onclick = () => { if (confirm('Quay về phiên bản đi kèm
 function renderAll() { renderVideos(); fillInputs(); renderChars(); renderTiers(); renderFrames(); renderVoices(); renderMusic(); }
 (async function main() {
   D = await window.api.init(); cfg = D.config;
+  I18N.setLang(cfg.lang || 'vi');
+  $('#langSel').value = cfg.lang || 'vi';
+  $('#langSel').onchange = e => { const v = e.target.value; const msg = v === 'en' ? 'Switch the whole app (control panel, LIVE screen, sermons, fortune cards, voice) to English?' : 'Chuyển toàn bộ app (bảng điều khiển, màn hình LIVE, bài giảng, thẻ quẻ, giọng đọc) sang tiếng Việt?'; if (!confirm(msg)) { e.target.value = cfg.lang || 'vi'; return; } window.api.setConfig('lang', v); };
   $('#ver').textContent = 'v' + D.version + (D.fromHot ? ' (cập nhật)' : '');
   $('#verInfo').innerHTML = `Đang chạy: <b>v${esc(D.version)}</b>${D.fromHot ? ' — bản cập nhật nóng' : ''}<br>Bản đi kèm bộ cài: v${esc(D.bundledVersion)}<br><span class="muted small">Dữ liệu: ${esc(D.userDir)}</span>`;
   bindInputs(); renderAll(); loadContentEditors(false); showTk(D.tiktok);

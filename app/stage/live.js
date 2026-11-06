@@ -24,7 +24,7 @@ window.LiveExtra = (function () {
   function addChat(user, text, kind) {
     const lc = C().layout.chat || {}; if (lc.show === false) return;
     const row = document.createElement('div'); row.className = 'crow' + (kind ? ' ' + kind : '');
-    const name = kind === 'reply' ? '🔊 Chùa' : (user && user.nickname) || 'Phật tử';
+    const name = kind === 'reply' ? (en() ? '🔊 Temple' : '🔊 Chùa') : (user && user.nickname) || (en() ? 'Devotee' : 'Phật tử');
     row.innerHTML = `<span class="cn"></span><span class="ct"></span>`;
     row.querySelector('.cn').textContent = name + ':';
     row.querySelector('.ct').textContent = ' ' + text;
@@ -62,14 +62,16 @@ window.LiveExtra = (function () {
 
   // ---------- thanh thông tin trực tiếp ----------
   const DOW = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+  const DOW_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const en = () => C() && C().lang === 'en';
   function tickInfo() {
     const li = C() && C().layout.liveinfo; if (!li) return;
     if (li.show === false) { infoEl.style.display = 'none'; return; }
     const d = new Date(); const p = n => String(n).padStart(2, '0');
     const parts = [];
     if (li.clock !== false) parts.push(`<span class="lv-dot"></span>LIVE · ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);
-    if (li.date !== false) parts.push(`${DOW[d.getDay()]}, ${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`);
-    if (li.viewers !== false && viewers) parts.push(`👁 ${viewers.toLocaleString('vi-VN')} đang xem`);
+    if (li.date !== false) parts.push(en() ? `${DOW_EN[d.getDay()]}, ${p(d.getMonth() + 1)}/${p(d.getDate())}/${d.getFullYear()}` : `${DOW[d.getDay()]}, ${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`);
+    if (li.viewers !== false && viewers) parts.push(en() ? `👁 ${viewers.toLocaleString('en-US')} watching` : `👁 ${viewers.toLocaleString('vi-VN')} đang xem`);
     if (li.likes !== false && likes) parts.push(`❤ ${likes.toLocaleString('vi-VN')}`);
     infoEl.innerHTML = parts.join('<span class="sep">•</span>');
   }
@@ -109,8 +111,8 @@ window.LiveExtra = (function () {
     if (ev.type === 'chat') onChat(ev);
     else if (ev.type === 'like' && ev.total) likes = Math.max(likes, ev.total);
     else if (ev.type === 'join') joinsToday++;
-    else if (ev.type === 'gift' && ev.user) addChat(ev.user, `đã cúng dường ${ev.repeat > 1 ? ev.repeat + ' ' : ''}${ev.giftName} 🎁`, 'gift');
-    else if (ev.type === 'follow' && ev.user) addChat(ev.user, 'đã theo dõi chùa 🙏', 'gift');
+    else if (ev.type === 'gift' && ev.user) addChat(ev.user, en() ? `offered ${ev.repeat > 1 ? ev.repeat + ' ' : ''}${ev.giftName} 🎁` : `đã cúng dường ${ev.repeat > 1 ? ev.repeat + ' ' : ''}${ev.giftName} 🎁`, 'gift');
+    else if (ev.type === 'follow' && ev.user) addChat(ev.user, en() ? 'followed the temple 🙏' : 'đã theo dõi chùa 🙏', 'gift');
   };
   L.onTikTok = function (s) { if (s && s.viewers) viewers = s.viewers; };
   L.chatEl = chatEl; L.camWrap = camWrap;

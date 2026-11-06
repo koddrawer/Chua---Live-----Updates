@@ -301,5 +301,6 @@
     "readZoom": 1.5,
     "dimBoards": true,
     "cardFrame": "alt"
-  }
+  },
+  "lang": "vi"
 }

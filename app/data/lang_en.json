@@ -1,0 +1,17 @@
+{
+ "voice.thanksTemplate": "Amitabha. Thank you {name} for offering {gift}. Congratulations {name}, you drew the fortune {fortuneName}, {verse}.",
+ "voice.greetTemplate": "Amitabha. Welcome, {name}, to the temple.",
+ "chatVoice.readTemplate": "{name} says: {comment}",
+ "chatVoice.replies": "amitabha, namo amitabha, namo, amituofo, a di da phat => Namo Amitabha Buddha. Peace and joy of body and mind to {name}.\npeace, pray for peace, bless => May {name} and your family always be peaceful and healthy.\nmoney, wealth, business, work, job => May {name}'s business prosper and wealth flow in abundance.\nlove, soulmate, partner, boyfriend, girlfriend => May {name} soon meet a good and loving partner.\nhealth, sick, ill, healing => May {name} and your loved ones be healthy and free from illness.\nexam, test, school, study => May {name} progress in your studies and pass your exams.\nparents, mom, dad, grandparents, family => May {name}'s parents and grandparents live long and be at peace.\nsad, tired, stress, lonely, depressed => {name}, all suffering will pass. Take a deep breath and smile.\nhello, hi, hey, good morning, good evening => Amitabha, welcome {name} to the temple.\nthank you, thanks, thank => Amitabha, the temple thanks you, {name}.",
+ "layout.title.text": "Visit the temple · Send hearts for a blessing",
+ "layout.card.giftText": "Offered {gift} · {coins} coins",
+ "layout.card.tierText": "✦ {tier} ✦",
+ "layout.card.headText": "",
+ "layout.fortune.titleText": "Fortune: {fortuneName}",
+ "tiers": [
+  {"label": "Devotee", "fortuneLevel": "Good Fortune"},
+  {"label": "Faithful Devotee", "fortuneLevel": "Great Fortune"},
+  {"label": "Great Patron", "fortuneLevel": "Supreme Fortune"},
+  {"label": "Dharma Protector", "fortuneLevel": "Highest Fortune"}
+ ]
+}
